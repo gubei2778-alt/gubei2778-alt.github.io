@@ -1,5 +1,5 @@
 /* 心山修行录 · 离线 Service Worker */
-const CACHE = "xinshan-v1";
+const CACHE = "xinshan-v2";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", e => {
