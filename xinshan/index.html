@@ -66,7 +66,7 @@
   .node .tag{ position:absolute; top:11px; right:13px; font-size:12px; }
   .node.cleared .tag{ color:var(--calm); }
   .mapFoot{ padding:8px 14px calc(14px + env(safe-area-inset-bottom)); }
-  .footGrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:7px; }
+  .footGrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
   .tbtn{ border:none; border-radius:12px; padding:10px 2px; font-size:11px; color:var(--soft); background:rgba(255,255,255,.06); cursor:pointer; position:relative; }
   .tbtn:active{ transform:scale(.95); }
   .tbtn .rd{ position:absolute; top:5px; right:9px; width:8px; height:8px; border-radius:50%; background:#ff6b6b; display:none; }
@@ -108,6 +108,11 @@
   .rcard .drop{ background:rgba(232,200,132,.12); border-radius:12px; padding:10px; margin:10px 0; font-size:13px; }
 
   /* 对话 */
+  #cutscene{ background:#03050a; }
+  canvas#ccv{ position:absolute; inset:0; width:100%; height:100%; }
+  .ccap{ position:absolute; left:0; right:0; bottom:20%; text-align:center; font-size:18px; letter-spacing:4px; color:#fff; text-shadow:0 2px 12px #000,0 0 20px rgba(0,0,0,.6); padding:0 26px; line-height:1.8; z-index:1; opacity:0; transition:opacity .1s; }
+  .cskip{ position:absolute; bottom:calc(20px + env(safe-area-inset-bottom)); right:18px; font-size:12px; opacity:.45; z-index:1; }
+
   #dialogue{ background:#05070d; justify-content:flex-end; }
   canvas#dcv{ position:absolute; inset:0; width:100%; height:100%; z-index:0; }
   #dialogue .dbg{ position:absolute; top:calc(20px + env(safe-area-inset-top)); right:18px; font-size:30px; opacity:.9; z-index:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
@@ -171,6 +176,7 @@
     <div class="scroll"><div class="path" id="pathList"></div></div>
     <div class="mapFoot"><div class="footGrid">
       <button class="tbtn" id="gearBtn">📿<br>法器</button>
+      <button class="tbtn" id="sideBtn">⚔️<br>支线</button>
       <button class="tbtn" id="questBtn">📜<br>任务<span class="rd"></span></button>
       <button class="tbtn" id="achBtn">🏆<br>成就</button>
       <button class="tbtn" id="recBtn">📊<br>纪录</button>
@@ -216,6 +222,12 @@
     </div>
   </div>
 
+  <div class="screen" id="cutscene">
+    <canvas id="ccv"></canvas>
+    <div class="ccap" id="ccap"></div>
+    <div class="cskip" id="cskip">▸ 轻触继续 / 跳过</div>
+  </div>
+
   <div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
   <div class="toast" id="toast"></div>
 </div>
@@ -230,6 +242,8 @@ const ITEMS=[
   {id:"lotus",  emoji:"🪷", name:"莲花座",     desc:"放下杂念回定力 +3",   apply:{lotusHeal:3}},
   {id:"sutra",  emoji:"📜", name:"般若经卷",   desc:"获得经验 +25%",       apply:{expMul:0.25}},
   {id:"relic",  emoji:"🪞", name:"无明业镜",   desc:"伤害+15% 定力+15",    apply:{dmgMul:0.15,maxComp:15}},
+  {id:"mirror", emoji:"🪟", name:"平等明镜",   desc:"获得经验 +20%（支线）", apply:{expMul:0.2}},
+  {id:"warmlotus",emoji:"💮",name:"慈心莲",    desc:"放下杂念回定力 +4（支线）",apply:{lotusHeal:4}},
 ];
 const DROPS=["beads","bell","staff","woodfish","lotus","sutra"]; // 主线6关掉落
 const getItem=id=>ITEMS.find(i=>i.id===id);
@@ -342,6 +356,34 @@ const LEVELS=[
    insight:"无明非敌，照之即明。当你清清楚楚地看见一切如其所是，心魔便失去了立足之地——这，就是开悟的一瞥。"},
 ];
 
+/* ===== 支线心魔 ===== */
+const SIDE=[
+  { name:"攀比之径", demonName:"嫉妒·攀比魔", demonEmoji:"👀", demonColor:"#7ec9a0", demonHp:130, tech:3, sky:"morning", eyes:4, spikes:0, unlock:1, drop:"mirror",
+    lesson:[{badge:"支线心魔",title:"攀比",body:"你刷到的，是别人的<span class='hl'>高光剪辑</span>，不是他的全部。每个人花期不同。<br><br>把目光从『别人有什么』，移回『我此刻拥有什么』——<span class='hl'>比较，是偷走快乐的贼</span>。"}],
+    intro:[{who:"山中老者",text:"这只魔，专挑你刷别人朋友圈的时候冒出来。"},{who:"山中老者",text:"它叫攀比。记住：和昨天的自己比，才是修行；和别人比，只是自讨苦吃。"}],
+    insight:"「比较是偷走快乐的贼。」与昨天的自己比，你已经走了很远。" },
+
+  { name:"郁结之沼", demonName:"悲伤·郁结魔", demonEmoji:"💧", demonColor:"#6f86c0", demonHp:150, tech:5, sky:"fog", eyes:2, spikes:0, unlock:2, drop:"warmlotus",
+    lesson:[{badge:"支线心魔",title:"悲伤",body:"悲伤不是需要被赶走的敌人。像对待一个哭泣的朋友那样，<span class='hl'>陪着它、抱抱它</span>。<br><br>压下去的情绪不会消失，只会沉到更深处。<span class='hl'>允许它，它才会流走</span>。"}],
+    intro:[{who:"山中老者",text:"有些日子，心里像下着雨，提不起任何劲。"},{who:"山中老者",text:"别急着『振作』。先允许自己难过——慈心的呼吸，是给自己撑一把伞。"}],
+    insight:"「允许悲伤，它才会流走。」你不必时刻坚强，温柔地抱住自己，就够了。" },
+
+  { name:"怯影之谷", demonName:"恐惧·怯懦魔", demonEmoji:"🫥", demonColor:"#8a7fb0", demonHp:165, tech:1, sky:"night", eyes:3, spikes:2, unlock:3, drop:null,
+    lesson:[{badge:"支线心魔",title:"恐惧",body:"恐惧总把事情想到<span class='hl'>最坏</span>。深而慢的呼吸，能告诉大脑：别慌。<br><br>然后问自己一句：『最坏能坏到哪去？我，能应对吗？』<span class='hl'>勇敢不是不怕，是怕着，仍往前走一步</span>。"}],
+    intro:[{who:"山中老者",text:"它专门放大你心里那个『万一』。"},{who:"山中老者",text:"用沉到腹部的呼吸稳住自己。勇敢，不是不怕，是怕着还往前走。"}],
+    insight:"「勇敢不是不怕，而是怕着仍往前。」呼吸沉下去，脚步才稳得住。" },
+
+  { name:"懈怠之坡", demonName:"拖延·懈怠魔", demonEmoji:"🐌", demonColor:"#b0975e", demonHp:170, tech:4, sky:"dusk", eyes:1, spikes:0, unlock:4, drop:null,
+    lesson:[{badge:"支线心魔",title:"拖延",body:"拖延往往不是懒，是<span class='hl'>怕做不好</span>。把任务切到小得不可能失败——<span class='hl'>只做两分钟</span>。<br><br>明快的呼吸，先唤醒身体，再唤醒行动。它的对手，从来只是『开始』。"}],
+    intro:[{who:"山中老者",text:"它最爱在你该动手时，悄悄递给你一部手机。"},{who:"山中老者",text:"别想着『做完』，只想『开始』。先做两分钟，觉醒的呼吸会带起你的劲。"}],
+    insight:"「不必做到完美，只需开始。」两分钟之后，惯性会替你往前推。" },
+
+  { name:"回声之渊", demonName:"悔恨·执念魔", demonEmoji:"🌑", demonColor:"#9a7fa8", demonHp:200, tech:3, sky:"cosmic", eyes:5, spikes:0, unlock:5, drop:null,
+    lesson:[{badge:"支线心魔",title:"悔恨",body:"反复回放过去的错误，是在用<span class='hl'>今天的力气</span>，惩罚一个已经回不去的昨天。<br><br>看着那个念头，对它说：<span class='hl'>我看见你了，但我不再跟你走</span>。"}],
+    intro:[{who:"山中老者",text:"最缠人的，是那句『要是当初……』"},{who:"山中老者",text:"过去改不了，但你可以选择，不再让它一遍遍重播。看着它，然后，放下。"}],
+    insight:"「过去无法重写，但你能停止重播。」放下不是遗忘，是不再被它拖着走。" },
+];
+
 /* ===== 剧情 ===== */
 const STORY_INTRO=[
   {who:"旁白",text:"早上七点，闹钟第三次响起。你早就醒了，只是不想起来。"},
@@ -428,13 +470,16 @@ const ACH=[
 /* ===== 存档 ===== */
 const SAVE_KEY="xinshan_rpg_v2";
 const DEFAULT={ cleared:-1, lv:1, exp:0, energy:0, maxComp:100, unlockedTech:[0],
-  sound:true, voice:true, seenIntro:false, seenEnd:false, compUp:0, name:"", role:"",
+  sound:true, voice:true, seenIntro:false, seenEnd:false, seenAscend:false, compUp:0, name:"", role:"",
   owned:{}, equipped:[], ach:{}, records:{}, choices:{warm:0,clear:0,soft:0}, ending:"",
+  sideCleared:{}, sideRecords:{},
   stats:{totalThoughts:0,maxCombo:0,noHitClears:0,wins:0},
   daily:{date:"",kills:0,maxCombo:0,thoughts:0,claimed:{}} };
 let S=load();
 function load(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s){ const m=Object.assign({},DEFAULT,s);
-  m.stats=Object.assign({},DEFAULT.stats,s.stats); m.daily=Object.assign({},DEFAULT.daily,s.daily); m.choices=Object.assign({warm:0,clear:0,soft:0},s.choices); return m; } }catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
+  m.stats=Object.assign({},DEFAULT.stats,s.stats); m.daily=Object.assign({},DEFAULT.daily,s.daily); m.choices=Object.assign({warm:0,clear:0,soft:0},s.choices);
+  m.owned=Object.assign({},s.owned); m.ach=Object.assign({},s.ach); m.records=Object.assign({},s.records); m.equipped=(s.equipped||[]).slice();
+  m.sideCleared=Object.assign({},s.sideCleared); m.sideRecords=Object.assign({},s.sideRecords); return m; } }catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
 const ROLES=[
   {id:"worker",label:"上班族 💼",pain:"老板的消息弹出来。你的胃，不自觉地缩了一下。"},
   {id:"student",label:"学生 🎓",pain:"导师的邮件弹出来。deadline 像影子，压在你的后背上。"},
@@ -559,7 +604,59 @@ function drawDlgScene(t){ const M=SCN[(dlg&&dlg.scene)||"fog"]||SCN.fog, W=dcW, 
   for(const p of dlgParts){ p.y-=p.s*0.016; if(p.y<-4){ p.y=H+4; p.x=Math.random()*W; } const op=0.08+0.2*Math.abs(Math.sin(t+p.ph)); dctx.fillStyle=(M.fog?"rgba(200,210,230,":"rgba(232,200,132,")+op+")"; dctx.beginPath(); dctx.arc(p.x+Math.sin(t+p.ph)*6,p.y,p.r,0,7); dctx.fill(); }
   const bg2=dctx.createLinearGradient(0,H*0.5,0,H); bg2.addColorStop(0,"rgba(5,7,13,0)"); bg2.addColorStop(1,"rgba(5,7,13,0.88)"); dctx.fillStyle=bg2; dctx.fillRect(0,H*0.5,W,H*0.5);
 }
-window.addEventListener("resize",()=>{ if(curScreen==="dialogue") sizeDcv(); });
+window.addEventListener("resize",()=>{ if(curScreen==="dialogue") sizeDcv(); if(curScreen==="cutscene") sizeCcv(); });
+
+/* ===== 全屏过场动画 ===== */
+const ccv=$("ccv"), cctx=ccv.getContext("2d"); let ccW=0,ccH=0,csRaf=0,cs=null,csClouds=[];
+function sizeCcv(){ const dpr=Math.min(2,window.devicePixelRatio||1); ccW=ccv.clientWidth; ccH=ccv.clientHeight; ccv.width=ccW*dpr; ccv.height=ccH*dpr; cctx.setTransform(dpr,0,0,dpr,0,0);
+  csClouds=Array.from({length:16},()=>({x:Math.random()*ccW,y:Math.random()*ccH,w:80+Math.random()*150,sp:34+Math.random()*70,o:.08+Math.random()*.18})); }
+const CUTS={
+  ascend:{ music:"story", shots:[
+    {t:3.0,p:"clouds",cap:"风，越来越大……"},
+    {t:3.2,p:"peak",cap:"云海之上，是最后的山顶。"},
+    {t:2.8,p:"card",cap:""},
+  ]},
+  shatter:{ music:"ending", shots:[
+    {t:2.8,p:"crack",cap:"无明，开始崩裂——"},
+    {t:2.2,p:"shards",cap:""},
+    {t:2.8,p:"whiteout",cap:"一切，看得清清楚楚。"},
+    {t:3.6,p:"dawn",cap:"心，亮了。"},
+  ]},
+};
+function playCutscene(id,onDone){ const C=CUTS[id]; if(!C){ onDone&&onDone(); return; } cs={C,onDone,idx:0,localT:0,globalT:0,last:performance.now()}; show("cutscene"); sizeCcv(); playMusic(C.music); if(!csRaf) csRaf=requestAnimationFrame(csLoop); }
+function csLoop(now){ if(!cs){ csRaf=0; return; } let dt=(now-cs.last)/1000; if(dt>.05) dt=.05; cs.last=now; cs.localT+=dt; cs.globalT+=dt;
+  const shot=cs.C.shots[cs.idx]; csPaint(shot.p, cs.localT, shot.t, cs.globalT, dt);
+  const cap=shot.cap||""; const fin=Math.min(1,cs.localT/0.6), fout=Math.min(1,Math.max(0,(shot.t-cs.localT)/0.6));
+  $("ccap").textContent=cap; $("ccap").style.opacity=cap?Math.min(fin,fout):0;
+  if(cs.localT>=shot.t) csNext();
+  csRaf=requestAnimationFrame(csLoop); }
+function csNext(){ if(!cs) return; cs.idx++; cs.localT=0; if(cs.idx>=cs.C.shots.length){ const cb=cs.onDone; cs=null; cb&&cb(); } }
+$("cutscene").onclick=()=>{ if(cs){ bell(440,.06); csNext(); } };
+function csPaint(p,t,dur,g,dt){ const W=ccW,H=ccH,k=Math.min(1,t/dur); cctx.clearRect(0,0,W,H);
+  if(p==="clouds"){ const sky=cctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#161e34"); sky.addColorStop(1,"#46587e"); cctx.fillStyle=sky; cctx.fillRect(0,0,W,H);
+    for(const c of csClouds){ c.y+=c.sp*dt*2.6; if(c.y>H+40){ c.y=-40; c.x=Math.random()*W; } cctx.fillStyle="rgba(222,228,242,"+c.o+")"; cctx.beginPath(); cctx.ellipse(c.x,c.y,c.w,c.w*0.3,0,0,7); cctx.fill(); }
+  } else if(p==="peak"){ const sky=cctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#26304e"); sky.addColorStop(1,"#6a7aa0"); cctx.fillStyle=sky; cctx.fillRect(0,0,W,H);
+    const py=H*1.0-k*H*0.55; cctx.fillStyle="#0e1424"; cctx.beginPath(); cctx.moveTo(W*0.5,py-H*0.45); cctx.lineTo(W,H); cctx.lineTo(0,H); cctx.closePath(); cctx.fill();
+    const gx=W*0.5,gy=py-H*0.45; const gg=cctx.createRadialGradient(gx,gy,2,gx,gy,100); gg.addColorStop(0,"rgba(255,242,206,.8)"); gg.addColorStop(1,"rgba(255,242,206,0)"); cctx.fillStyle=gg; cctx.beginPath(); cctx.arc(gx,gy,100,0,7); cctx.fill();
+    const part=k*W*0.55; cctx.fillStyle="rgba(206,214,232,.85)"; cctx.beginPath(); cctx.ellipse(W*0.25-part,H*0.6,W*0.4,60,0,0,7); cctx.fill(); cctx.beginPath(); cctx.ellipse(W*0.75+part,H*0.6,W*0.4,60,0,0,7); cctx.fill();
+  } else if(p==="card"){ const sky=cctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#1a2238"); sky.addColorStop(1,"#3a2a4e"); cctx.fillStyle=sky; cctx.fillRect(0,0,W,H);
+    for(let i=0;i<50;i++){ const x=(i*73.3)%W,y=(i*131.7)%(H*0.6); cctx.fillStyle="rgba(255,255,255,"+(.2+.5*Math.sin(g*2+i))+")"; cctx.fillRect(x,y,1.4,1.4); }
+    cctx.fillStyle="#0c1018"; cctx.beginPath(); cctx.moveTo(W*0.5,H*0.34); cctx.lineTo(W,H); cctx.lineTo(0,H); cctx.closePath(); cctx.fill();
+    cctx.globalAlpha=k; cctx.textAlign="center"; cctx.textBaseline="middle"; cctx.fillStyle="#e8c884"; cctx.font="bold 30px serif"; cctx.fillText("灵 峰 · 见 性 台",W/2,H*0.46);
+    cctx.strokeStyle="rgba(232,200,132,.6)"; cctx.lineWidth=1.5; cctx.beginPath(); cctx.moveTo(W/2-90,H*0.46+28); cctx.lineTo(W/2+90,H*0.46+28); cctx.stroke(); cctx.globalAlpha=1;
+  } else if(p==="crack"){ cctx.fillStyle="#05030a"; cctx.fillRect(0,0,W,H);
+    cctx.strokeStyle="rgba(200,160,255,"+(0.45+0.45*Math.sin(g*8))+")"; cctx.lineWidth=2.2;
+    for(let i=0;i<9;i++){ const a=i/9*Math.PI*2; const len=k*Math.max(W,H)*0.62; let x=W/2,y=H/2; cctx.beginPath(); cctx.moveTo(x,y); for(let s=1;s<=6;s++){ const aa=a+Math.sin(s*1.7+i)*0.3; x+=Math.cos(aa)*len/6; y+=Math.sin(aa)*len/6; cctx.lineTo(x,y);} cctx.stroke(); }
+    const gg=cctx.createRadialGradient(W/2,H/2,2,W/2,H/2,k*130+10); gg.addColorStop(0,"rgba(255,255,255,"+k+")"); gg.addColorStop(1,"rgba(255,255,255,0)"); cctx.fillStyle=gg; cctx.beginPath(); cctx.arc(W/2,H/2,k*130+10,0,7); cctx.fill();
+  } else if(p==="shards"){ cctx.fillStyle="#fdfbf5"; cctx.fillRect(0,0,W,H); const N=15;
+    for(let i=0;i<N;i++){ const a=i/N*Math.PI*2; const d=k*Math.max(W,H)*0.85; const cx=W/2+Math.cos(a)*d, cy=H/2+Math.sin(a)*d; cctx.save(); cctx.translate(cx,cy); cctx.rotate(a+g*2); cctx.fillStyle="rgba(42,22,62,"+(1-k)+")"; const sz=64*(1-k*0.4); cctx.beginPath(); cctx.moveTo(0,-sz); cctx.lineTo(sz*0.7,sz*0.5); cctx.lineTo(-sz*0.7,sz*0.5); cctx.closePath(); cctx.fill(); cctx.restore(); }
+  } else if(p==="whiteout"){ cctx.fillStyle="#fff7ea"; cctx.fillRect(0,0,W,H); cctx.strokeStyle="rgba(232,200,132,.5)"; cctx.lineWidth=2;
+    const mx=Math.max(W,H); for(let i=0;i<6;i++){ const r=((g*130+i*64)%mx); cctx.globalAlpha=Math.max(0,1-r/mx); cctx.beginPath(); cctx.arc(W/2,H/2,r,0,7); cctx.stroke(); } cctx.globalAlpha=1;
+  } else if(p==="dawn"){ const sky=cctx.createLinearGradient(0,0,0,H); sky.addColorStop(0,"#2a2348"); sky.addColorStop(.5,"#b86a72"); sky.addColorStop(1,"#f3c878"); cctx.fillStyle=sky; cctx.fillRect(0,0,W,H);
+    const sy=H*0.62-k*H*0.26, sx=W*0.5; const sg=cctx.createRadialGradient(sx,sy,8,sx,sy,170); sg.addColorStop(0,"rgba(255,250,232,1)"); sg.addColorStop(.4,"rgba(255,214,150,.6)"); sg.addColorStop(1,"rgba(255,214,150,0)"); cctx.fillStyle=sg; cctx.beginPath(); cctx.arc(sx,sy,170,0,7); cctx.fill();
+    cctx.fillStyle="rgba(255,252,238,.97)"; cctx.beginPath(); cctx.arc(sx,sy,34,0,7); cctx.fill();
+    cctx.fillStyle="#1a1426"; cctx.beginPath(); cctx.moveTo(0,H); for(let i=0;i<=5;i++){ const x=W*i/5,h=H*0.78-Math.abs(Math.sin(i*1.3))*70; cctx.lineTo(x,h);} cctx.lineTo(W,H); cctx.closePath(); cctx.fill(); }
+}
 
 /* ===== 地图 ===== */
 function refreshDaily(){ if(S.daily.date!==todayStr()){ S.daily={date:todayStr(),kills:0,maxCombo:0,thoughts:0,claimed:{}}; save(); } }
@@ -583,18 +680,20 @@ function renderMap(){
 }
 function preLevel(i){ // 首次进入播放剧情
   const lv=LEVELS[i]; const key="introSeen_"+i;
-  if(lv.intro && !S[key]){ S[key]=true; save(); runDialogue(lv.intro, lv.demonEmoji, ()=>enterLesson(i), "story", lv.sky); }
-  else enterLesson(i);
+  const go=()=>{ if(lv.intro && !S[key]){ S[key]=true; save(); runDialogue(lv.intro, lv.demonEmoji, ()=>enterLesson(i), "story", lv.sky); } else enterLesson(i); };
+  if(i===5 && !S.seenAscend){ S.seenAscend=true; save(); playCutscene("ascend", go); } // 登顶过场
+  else go();
 }
 
 /* ===== 微课 ===== */
 let lessonState=null;
-function enterLesson(i){ const lv=LEVELS[i]; lessonState={i,page:0,cards:lv.lesson.map(c=>({...c,body:c.body.replace("TECH_HOW",TECHS[lv.tech].how)}))}; show("lesson"); renderLesson(); }
+function enterChallenge(lv,meta){ lessonState={lv,meta,page:0,cards:lv.lesson.map(c=>({...c,body:c.body.replace("TECH_HOW",TECHS[lv.tech].how)}))}; show("lesson"); renderLesson(); }
+function enterLesson(i){ enterChallenge(LEVELS[i],{idx:i,side:false}); }
 function renderLesson(){ const {cards,page}=lessonState,c=cards[page];
   $("lessonCard").innerHTML=`<div class="badge">${c.badge}</div><h2>${c.title}</h2><p>${c.body}</p>`;
   $("lessonDots").innerHTML=cards.map((_,k)=>`<div class="ldot ${k===page?'on':''}"></div>`).join("");
   $("lessonNext").textContent=page<cards.length-1?"下 一 步":"开 始 挑 战 ⚔️"; }
-$("lessonNext").onclick=()=>{ if(lessonState.page<lessonState.cards.length-1){ lessonState.page++; renderLesson(); } else startBattle(lessonState.i); };
+$("lessonNext").onclick=()=>{ if(lessonState.page<lessonState.cards.length-1){ lessonState.page++; renderLesson(); } else startBattle(lessonState.lv, lessonState.meta); };
 $("lessonBack").onclick=()=>{ renderMap(); playMusic("zen"); show("map"); };
 
 /* ===== 战斗 ===== */
@@ -604,9 +703,9 @@ function sizeCanvas(){ DPR=Math.min(2,window.devicePixelRatio||1); W=cv.clientWi
 window.addEventListener("resize",()=>{ if(curScreen==="battle"){ sizeCanvas(); if(B){ B.player.x=W/2; B.player.y=H-130; B.demon.x=W/2; B.demon.y=H*0.3; } } });
 const THOUGHTS=["工作没做完","他凭什么","完蛋了","好无聊","手机响了","我做不到","等下吃什么","为什么是我","好困啊","别人比我强","万一失败呢","静不下来","我是不是很差","好烦","受不了了"];
 let B=null,screenShake=0;
-function startBattle(i){
-  const lv=LEVELS[i]; show("battle"); sizeCanvas(); const bo=bonus();
-  B={ i, lv, t:0, last:performance.now(), running:true, over:false, startT:performance.now(),
+function startBattle(lv, meta){
+  const i=meta.idx, side=!!meta.side; show("battle"); sizeCanvas(); const bo=bonus();
+  B={ i, lv, side, t:0, last:performance.now(), running:true, over:false, startT:performance.now(),
     tech:lv.tech, maxComp:S.maxComp+bo.maxComp, comp:S.maxComp+bo.maxComp, bo, tookHit:false,
     demon:{x:W/2,y:H*0.3,hp:lv.demonHp,maxHp:lv.demonHp,shake:0,color:lv.demonColor,eyes:lv.eyes,spikes:lv.spikes},
     player:{x:W/2,y:H-130,aura:36,glow:0},
@@ -617,7 +716,7 @@ function startBattle(i){
   buildPhases();
   $("demonName").textContent=lv.demonName; $("techLab").textContent="心法："+TECHS[lv.tech].name;
   $("bSound").textContent=S.sound?"🔊":"🔇"; $("bVoice").textContent=S.voice?"🗣️":"🔇";
-  playMusic("battle",90+i*8);
+  playMusic("battle", side ? 100+i*7 : 90+i*8);
   for(let k=0;k<44;k++) B.particles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,s:Math.random()*8+2});
   requestAnimationFrame(battleLoop);
 }
@@ -782,6 +881,7 @@ function drawOutro(){ const dur=B.win?1.9:1.1, k=Math.min(1,B.outroT/dur);
 /* ---- 结算 ---- */
 function finishBattle(win){ stopMusic(); if(window.speechSynthesis) speechSynthesis.cancel();
   const lv=B.lv,idx=B.i;
+  if(B.side){ if(win) finishSideWin(lv,idx); else { bell(180,.2); showResult(false,{lv,idx,side:true}); } return; }
   if(win){
     const firstClear=S.cleared<idx;
     const elapsed=(performance.now()-B.startT)/1000;
@@ -805,8 +905,29 @@ function finishBattle(win){ stopMusic(); if(window.speechSynthesis) speechSynthe
     if(showEnd){ S.seenEnd=true; seqs.push({lines:buildEnding(), bg:"🌅", mood:"ending", scene:"sunrise"}); }
     checkAch(); save();
     showResult(true,{lv,idx,gainExp,gainEnergy,leveled,firstClear,dropItem,maxCombo:B.maxCombo,
-      onClose:()=>{ if(showEnd) S.seenEnd=true; save(); playSeq(seqs, toMap); }});
-  } else { bell(180,.2); showResult(false,{lv,idx}); }
+      onClose:()=>{ save(); if(showEnd) playCutscene("shatter", ()=>playSeq(seqs, toMap)); else playSeq(seqs, toMap); }});
+  } else { bell(180,.2); showResult(false,{lv,idx,side:false}); }
+}
+function finishSideWin(lv,idx){
+  const first=!S.sideCleared[idx], elapsed=(performance.now()-B.startT)/1000;
+  const rec=S.sideRecords[idx]||{}; if(!rec.time||elapsed<rec.time) rec.time=elapsed; if(!rec.combo||B.maxCombo>rec.combo) rec.combo=B.maxCombo; S.sideRecords[idx]=rec;
+  if(B.maxCombo>S.stats.maxCombo) S.stats.maxCombo=B.maxCombo; S.stats.wins++; if(!B.tookHit) S.stats.noHitClears++;
+  S.daily.kills++; if(B.maxCombo>S.daily.maxCombo) S.daily.maxCombo=B.maxCombo;
+  const gainEnergy=20+idx*6; S.energy+=gainEnergy;
+  let dropItem=null;
+  if(first){ S.sideCleared[idx]=true; if(lv.drop && !S.owned[lv.drop]){ S.owned[lv.drop]=true; dropItem=getItem(lv.drop); } }
+  const gainExp=Math.round((30+idx*12+(first?20:0))*(1+B.bo.expMul));
+  let leveled=0; S.exp+=gainExp; while(S.exp>=expNeed(S.lv)){ S.exp-=expNeed(S.lv); S.lv++; S.maxComp+=15; leveled++; }
+  bell(784,.22); setTimeout(()=>bell(1046,.18),200); checkAch(); save();
+  show("result"); playMusic("zen");
+  let up=leveled>0?`<div class="levelup">✨ 修为提升 ${leveled} 级 → ${S.lv} 级</div>`:"";
+  let drop=dropItem?`<div class="drop">🎁 获得法器 ${dropItem.emoji} <b style="color:var(--gold)">${dropItem.name}</b> — ${dropItem.desc}</div>`:"";
+  let combo=B.maxCombo>=2?`<div style="font-size:12px;opacity:.7">本场最高连击 ×${B.maxCombo}</div>`:"";
+  $("resultCard").innerHTML=`<div class="em">🌿</div><h2>支线降伏</h2>
+    <div class="insight"><b>心法领悟</b><br>${lv.insight}</div>${up}${drop}
+    <div class="rewards"><span>📖 经验 +${gainExp}</span><span>✨ 灵气 +${gainEnergy}</span></div>${combo}
+    <div style="display:flex;gap:10px;margin-top:8px"><button class="btn ghost" id="rsMap" style="flex:0 0 100px">返回</button><button class="btn" id="rsMore">更多支线</button></div>`;
+  $("rsMap").onclick=toMap; $("rsMore").onclick=()=>{ B=null; renderMap(); show("map"); panelSide(); };
 }
 function showResult(win,d){ show("result"); playMusic("zen"); const card=$("resultCard");
   if(win){
@@ -822,7 +943,8 @@ function showResult(win,d){ show("result"); playMusic("zen"); const card=$("resu
     card.innerHTML=`<div class="em">🌧️</div><h2>心 乱 了</h2>
       <div class="insight">定力耗尽，被杂念淹没——这正是修行的日常。<br><b>失败不是退步</b>，每一次重来，心都更稳一分。</div>
       <div style="display:flex;gap:10px;margin-top:6px"><button class="btn ghost" id="resBack" style="flex:0 0 110px">返回心山</button><button class="btn" id="resRetry">再 试 一 次</button></div>`;
-    $("resBack").onclick=toMap; $("resRetry").onclick=()=>{ const i=B.i; B=null; startBattle(i); };
+    const rlv=d.lv, rmeta={idx:d.idx, side:!!d.side};
+    $("resBack").onclick=toMap; $("resRetry").onclick=()=>{ B=null; startBattle(rlv, rmeta); };
   }
 }
 function toMap(){ B=null; renderMap(); playMusic("zen"); show("map"); }
@@ -887,7 +1009,20 @@ function panelCult(){
   $("buyComp").onclick=()=>{ if(S.energy<cost){ toast("灵气不足"); return; } S.energy-=cost; S.maxComp+=10; S.compUp++; save(); toast("定力上限 +10"); panelCult(); renderMap(); };
   $("buyExp").onclick=()=>{ if(S.energy<30){ toast("灵气不足"); return; } S.energy-=30; S.exp+=50; let lv=0; while(S.exp>=expNeed(S.lv)){ S.exp-=expNeed(S.lv); S.lv++; S.maxComp+=15; lv++; } if(lv){ checkAch(); toast("修为提升 "+lv+" 级"); } else toast("经验 +50"); save(); panelCult(); renderMap(); };
 }
-$("gearBtn").onclick=panelGear; $("questBtn").onclick=panelQuest; $("achBtn").onclick=panelAch; $("recBtn").onclick=panelRec; $("cultBtn").onclick=panelCult;
+function panelSide(){
+  let h=`<h2>⚔️ 心魔录 · 支线</h2><div class="hint">可选的额外心魔，胜利得灵气与专属法器，可重复挑战</div>`;
+  SIDE.forEach((s,i)=>{ const unlocked=S.cleared>=s.unlock, cleared=S.sideCleared[i];
+    h+=`<div class="row2 ${unlocked?"":"locked"}" ${unlocked?`data-side="${i}"`:""}>
+      <div class="ic">${s.demonEmoji}</div><div><div class="nm">${s.name}${cleared?" ✓":""}</div>
+      <div class="ds">${unlocked?("心魔："+s.demonName):("🔒 降伏第"+(s.unlock+1)+"关后解锁")}</div></div>
+      <div class="st">${unlocked?(cleared?"重战 ⟳":"挑战 ⚔️"):""}</div></div>`; });
+  h+=`<div class="hint" style="margin-top:8px">已降伏支线 ${Object.keys(S.sideCleared).length} / ${SIDE.length}</div><button class="btn" onclick="closePanel()">关 闭</button>`;
+  openPanel(h);
+  document.querySelectorAll("[data-side]").forEach(el=>{ el.onclick=()=>{ closePanel(); preSide(+el.dataset.side); }; });
+}
+function preSide(i){ const s=SIDE[i], key="sideIntroSeen_"+i; const go=()=>enterChallenge(s,{idx:i,side:true});
+  if(s.intro && !S[key]){ S[key]=true; save(); runDialogue(s.intro, s.demonEmoji, go, "story", s.sky); } else go(); }
+$("gearBtn").onclick=panelGear; $("sideBtn").onclick=panelSide; $("questBtn").onclick=panelQuest; $("achBtn").onclick=panelAch; $("recBtn").onclick=panelRec; $("cultBtn").onclick=panelCult;
 
 /* ===== 导航 ===== */
 let pickedRole="worker";
