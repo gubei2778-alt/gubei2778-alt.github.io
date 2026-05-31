@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="心山修行录">
+<meta name="theme-color" content="#0a0d16">
+<title>心山修行录</title>
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{ --gold:#e8c884; --soft:#dfe6f5; --calm:#7fd1c1; --ink:#10141f; }
+  html,body{ height:100%; overscroll-behavior:none; }
+  body{ font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; color:var(--soft);
+    background:#0a0d16; touch-action:none; overflow:hidden; user-select:none; -webkit-user-select:none;
+    display:flex; align-items:center; justify-content:center; }
+  #app{ position:relative; width:100%; max-width:480px; height:100vh; height:100dvh; max-height:920px; overflow:hidden; background:#0a0d16; }
+
+  .screen{ position:absolute; inset:0; display:none; flex-direction:column; opacity:0; transition:opacity .45s; }
+  .screen.active{ display:flex; opacity:1; }
+  .scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+  .btn{ border:none; border-radius:15px; padding:15px; font-size:16px; font-weight:600; color:var(--ink); letter-spacing:3px;
+        background:linear-gradient(135deg,var(--gold),#f3dca6); cursor:pointer; box-shadow:0 6px 20px rgba(232,200,132,.22); transition:transform .12s; width:100%; }
+  .btn:active{ transform:scale(.97); }
+  .btn.ghost{ background:rgba(255,255,255,.07); color:var(--soft); box-shadow:none; font-weight:500; }
+  .btn:disabled{ opacity:.4; }
+
+  #title{ align-items:center; justify-content:center; text-align:center; padding:30px; background:radial-gradient(circle at 50% 28%, #2a3a5e, #11162a 70%); }
+  #title h1{ font-size:42px; letter-spacing:12px; color:var(--gold); text-shadow:0 0 30px rgba(232,200,132,.5); }
+  #title .sub{ margin-top:10px; font-size:13px; opacity:.6; letter-spacing:4px; }
+  #title .mtn{ font-size:84px; margin:22px 0; filter:drop-shadow(0 0 22px rgba(232,200,132,.45)); animation:bob 5s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  #title .btns{ width:260px; display:flex; flex-direction:column; gap:11px; margin-top:6px; }
+
+  #create{ align-items:center; justify-content:center; padding:26px; background:radial-gradient(circle at 50% 30%, #243352, #11162a 72%); }
+  .cwrap{ width:100%; max-width:330px; text-align:center; }
+  .cwrap h2{ font-size:22px; color:var(--gold); letter-spacing:3px; }
+  .cwrap p{ font-size:13px; opacity:.75; margin:8px 0 18px; line-height:1.7; }
+  .cwrap p b{ color:var(--calm); }
+  #nameInput{ width:100%; padding:13px 16px; border-radius:13px; border:1px solid rgba(232,200,132,.3); background:rgba(255,255,255,.06); color:var(--soft); font-size:16px; text-align:center; outline:none; }
+  #nameInput::placeholder{ color:rgba(223,230,245,.4); }
+  .clab{ font-size:12px; opacity:.65; margin:18px 0 10px; }
+  .roleGrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; }
+  .roleChip{ padding:12px 6px; border-radius:13px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.05); color:var(--soft); font-size:13px; cursor:pointer; transition:.15s; }
+  .roleChip:active{ transform:scale(.97); }
+  .roleChip.on{ border-color:var(--gold); background:rgba(232,200,132,.16); color:var(--gold); }
+
+  #map{ background:linear-gradient(180deg,#0d1424,#161f38); }
+  .mapHead{ padding:14px 18px 6px; display:flex; justify-content:space-between; align-items:center; }
+  .mapHead .t{ font-size:17px; color:var(--gold); letter-spacing:2px; }
+  .meta{ font-size:11.5px; opacity:.85; text-align:right; line-height:1.6; } .meta b{ color:var(--gold); }
+  .path{ position:relative; padding:8px 0 24px; }
+  .node{ position:relative; margin:0 auto 32px; width:80%; max-width:344px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+          border-radius:18px; padding:13px 15px; cursor:pointer; transition:.15s; }
+  .node:active{ transform:scale(.98); }
+  .node.locked{ opacity:.4; cursor:not-allowed; }
+  .node.cleared{ border-color:rgba(127,209,193,.4); }
+  .node.hidden{ border-color:rgba(200,150,255,.5); background:rgba(120,80,180,.12); }
+  .node::after{ content:""; position:absolute; left:50%; bottom:-32px; width:2px; height:32px; background:linear-gradient(rgba(232,200,132,.5),rgba(232,200,132,0)); }
+  .node:last-child::after{ display:none; }
+  .node .row{ display:flex; align-items:center; gap:12px; }
+  .node .face{ font-size:32px; }
+  .node .info .nm{ font-size:14.5px; color:var(--gold); } .node .info .de{ font-size:12px; opacity:.7; margin-top:2px; }
+  .node .tag{ position:absolute; top:11px; right:13px; font-size:12px; }
+  .node.cleared .tag{ color:var(--calm); }
+  .mapFoot{ padding:8px 14px calc(14px + env(safe-area-inset-bottom)); }
+  .footGrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:7px; }
+  .tbtn{ border:none; border-radius:12px; padding:10px 2px; font-size:11px; color:var(--soft); background:rgba(255,255,255,.06); cursor:pointer; position:relative; }
+  .tbtn:active{ transform:scale(.95); }
+  .tbtn .rd{ position:absolute; top:5px; right:9px; width:8px; height:8px; border-radius:50%; background:#ff6b6b; display:none; }
+  .tbtn.alert .rd{ display:block; animation:pulse 1.2s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  #lesson{ background:linear-gradient(180deg,#13182c,#0c1020); padding:22px 22px calc(18px + env(safe-area-inset-bottom)); justify-content:center; }
+  .lcard{ background:rgba(255,255,255,.05); border:1px solid rgba(232,200,132,.2); border-radius:20px; padding:22px 20px; }
+  .lcard .badge{ font-size:12px; color:var(--calm); letter-spacing:2px; }
+  .lcard h2{ font-size:22px; color:var(--gold); margin:8px 0 14px; letter-spacing:2px; }
+  .lcard p{ font-size:14.5px; line-height:1.95; opacity:.95; } .lcard .hl{ color:var(--calm); }
+  .ldots{ display:flex; gap:7px; justify-content:center; margin:16px 0; }
+  .ldot{ width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.2); } .ldot.on{ background:var(--gold); }
+  .lbtns{ display:flex; gap:10px; }
+
+  #battle{ background:#05070d; }
+  canvas#bcv{ position:absolute; inset:0; width:100%; height:100%; }
+  .hud{ position:absolute; inset:0; pointer-events:none; }
+  .demonBar{ position:absolute; top:calc(12px + env(safe-area-inset-top)); left:14px; right:14px; }
+  .demonName{ font-size:14px; color:#ff9d9d; text-align:center; letter-spacing:2px; text-shadow:0 1px 4px #000; }
+  .hpOuter{ height:12px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); border-radius:7px; margin-top:6px; overflow:hidden; }
+  .hpInner{ height:100%; width:100%; background:linear-gradient(90deg,#ff5a6e,#ff96a4); transition:width .25s; }
+  .combo{ position:absolute; top:calc(60px + env(safe-area-inset-top)); width:100%; text-align:center; font-size:22px; color:var(--gold); font-weight:bold; text-shadow:0 0 12px rgba(232,200,132,.6); opacity:0; transition:opacity .2s; }
+  .composeBar{ position:absolute; left:14px; right:14px; bottom:calc(72px + env(safe-area-inset-bottom)); }
+  .composeLab{ font-size:11px; opacity:.85; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .cpOuter{ height:10px; background:rgba(0,0,0,.5); border:1px solid rgba(127,209,193,.3); border-radius:6px; overflow:hidden; }
+  .cpInner{ height:100%; width:100%; background:linear-gradient(90deg,#5fb8a8,#9ef5d8); transition:width .2s; }
+  .bphase{ position:absolute; bottom:calc(32px + env(safe-area-inset-bottom)); width:100%; text-align:center; font-size:15px; letter-spacing:6px; color:#fff; text-shadow:0 0 10px #000; }
+  .btopbtns{ position:absolute; top:calc(10px + env(safe-area-inset-top)); right:12px; display:flex; gap:8px; pointer-events:auto; }
+  .iconBtn{ background:rgba(0,0,0,.4); border:1px solid rgba(255,255,255,.15); color:#fff; border-radius:10px; padding:6px 10px; font-size:12px; cursor:pointer; }
+  .switchBtn{ position:absolute; left:12px; bottom:calc(28px + env(safe-area-inset-bottom)); pointer-events:auto; background:rgba(0,0,0,.4); border:1px solid rgba(232,200,132,.3); color:var(--gold); border-radius:10px; padding:7px 10px; font-size:11px; cursor:pointer; }
+
+  #result{ background:rgba(8,11,20,.93); align-items:center; justify-content:center; padding:24px; }
+  .rcard{ background:linear-gradient(160deg,#26314f,#1c2742); border:1px solid rgba(232,200,132,.25); border-radius:22px; padding:24px 22px; max-width:362px; width:100%; text-align:center; max-height:90vh; overflow-y:auto; }
+  .rcard .em{ font-size:54px; } .rcard h2{ font-size:23px; color:var(--gold); margin:8px 0 6px; letter-spacing:3px; }
+  .rcard .insight{ background:rgba(127,209,193,.1); border-radius:14px; padding:13px; font-size:14px; line-height:1.85; margin:13px 0; color:#cdeee7; } .rcard .insight b{ color:var(--calm); }
+  .rcard .rewards{ display:flex; justify-content:center; gap:16px; margin:10px 0; font-size:14px; flex-wrap:wrap; }
+  .rcard .levelup{ color:var(--gold); margin:7px 0; font-size:14px; }
+  .rcard .drop{ background:rgba(232,200,132,.12); border-radius:12px; padding:10px; margin:10px 0; font-size:13px; }
+
+  /* 对话 */
+  #dialogue{ background:#05070d; justify-content:flex-end; }
+  canvas#dcv{ position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+  #dialogue .dbg{ position:absolute; top:calc(20px + env(safe-area-inset-top)); right:18px; font-size:30px; opacity:.9; z-index:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  #dialogue .dbox{ z-index:1; }
+  .dbox{ position:relative; margin:0 14px calc(28px + env(safe-area-inset-bottom)); background:linear-gradient(160deg,rgba(38,49,79,.97),rgba(20,28,46,.97)); border:1px solid rgba(232,200,132,.3); border-radius:18px; padding:18px 18px 16px; }
+  .dwho{ position:absolute; top:-14px; left:18px; background:var(--gold); color:var(--ink); font-size:13px; font-weight:700; padding:4px 14px; border-radius:12px; }
+  .dtext{ font-size:15.5px; line-height:1.9; min-height:60px; margin-top:8px; }
+  .dtext.narrate{ font-style:italic; opacity:.82; }
+  .dchoices{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .dchoice{ background:rgba(255,255,255,.07); border:1px solid rgba(232,200,132,.35); border-radius:12px; padding:11px 14px; font-size:14px; color:var(--soft); text-align:left; cursor:pointer; }
+  .dchoice:active{ transform:scale(.98); }
+  .dnext{ text-align:right; font-size:12px; opacity:.6; margin-top:8px; }
+
+  /* 通用面板 */
+  .modal{ position:absolute; inset:0; z-index:40; background:rgba(8,11,20,.85); display:none; align-items:center; justify-content:center; padding:20px; }
+  .modal.on{ display:flex; }
+  .card{ background:linear-gradient(160deg,#26314f,#1c2742); border:1px solid rgba(232,200,132,.25); border-radius:20px; padding:22px 18px; max-width:368px; width:100%; max-height:88vh; overflow-y:auto; }
+  .card h2{ font-size:19px; color:var(--gold); margin-bottom:4px; letter-spacing:2px; text-align:center; }
+  .card .hint{ font-size:12px; opacity:.65; text-align:center; margin-bottom:12px; }
+  .row2{ display:flex; gap:10px; align-items:center; padding:11px; border-radius:13px; background:rgba(255,255,255,.04); margin-bottom:8px; }
+  .row2.locked{ opacity:.4; } .row2.on{ border:1px solid var(--calm); background:rgba(127,209,193,.1); }
+  .row2 .ic{ font-size:28px; } .row2 .nm{ font-size:14px; color:var(--gold); } .row2 .ds{ font-size:11.5px; opacity:.75; margin-top:2px; }
+  .row2 .st{ margin-left:auto; font-size:11px; color:var(--calm); white-space:nowrap; }
+  .achG{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+  .ach{ background:rgba(255,255,255,.05); border-radius:12px; padding:9px; display:flex; gap:8px; align-items:center; } .ach.locked{ opacity:.35; }
+  .ach .ai{ font-size:22px; } .ach .an{ font-size:12px; color:var(--gold); } .ach .ad{ font-size:10px; opacity:.65; line-height:1.3; margin-top:1px; }
+
+  .toast{ position:absolute; top:64px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.78); padding:9px 20px; border-radius:20px; font-size:13px; z-index:60; opacity:0; transition:opacity .35s; pointer-events:none; white-space:nowrap; }
+  .toast.on{ opacity:1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="screen active" id="title">
+    <h1>心山</h1>
+    <div class="sub">修 行 录 · 边玩边修的冥想之旅</div>
+    <div class="mtn">⛰️</div>
+    <div class="btns">
+      <button class="btn" id="startJourney">开 始 修 行</button>
+      <button class="btn ghost" id="continueJourney">继 续 修 行</button>
+      <button class="btn ghost" id="howto">玩 法 说 明</button>
+    </div>
+  </div>
+
+  <div class="screen" id="create">
+    <div class="cwrap">
+      <h2>入 山 之 前</h2>
+      <p>说说你自己——这会让这趟旅程，更像<b>你的</b>故事。</p>
+      <input id="nameInput" maxlength="6" placeholder="你的名字（可留空）" autocomplete="off">
+      <div class="clab">此刻的你，是——</div>
+      <div class="roleGrid" id="roleGrid"></div>
+      <button class="btn" id="createOk">入 山</button>
+    </div>
+  </div>
+
+  <div class="screen" id="map">
+    <div class="mapHead">
+      <div class="t">⛰️ 心山·修行之路</div>
+      <div class="meta">修为 <b id="mLv">1</b> 级 · <span id="mRealm">凡尘</span><br>✨ <b id="mEnergy">0</b> 灵气 · 定力 <b id="mComp">100</b></div>
+    </div>
+    <div class="scroll"><div class="path" id="pathList"></div></div>
+    <div class="mapFoot"><div class="footGrid">
+      <button class="tbtn" id="gearBtn">📿<br>法器</button>
+      <button class="tbtn" id="questBtn">📜<br>任务<span class="rd"></span></button>
+      <button class="tbtn" id="achBtn">🏆<br>成就</button>
+      <button class="tbtn" id="recBtn">📊<br>纪录</button>
+      <button class="tbtn" id="cultBtn">🧘<br>闭关</button>
+    </div></div>
+  </div>
+
+  <div class="screen" id="lesson">
+    <div class="lcard" id="lessonCard"></div>
+    <div class="ldots" id="lessonDots"></div>
+    <div class="lbtns">
+      <button class="btn ghost" id="lessonBack" style="flex:0 0 80px">退出</button>
+      <button class="btn" id="lessonNext">下 一 步</button>
+    </div>
+  </div>
+
+  <div class="screen" id="battle">
+    <canvas id="bcv"></canvas>
+    <div class="hud">
+      <div class="demonBar"><div class="demonName" id="demonName">心魔</div><div class="hpOuter"><div class="hpInner" id="demonHp"></div></div></div>
+      <div class="combo" id="comboTxt"></div>
+      <div class="btopbtns">
+        <button class="iconBtn" id="bSound">🔊</button>
+        <button class="iconBtn" id="bVoice">🗣️</button>
+        <button class="iconBtn" id="bQuit">退出</button>
+      </div>
+      <div class="composeBar"><div class="composeLab"><span id="techLab">心法：自然呼吸</span><span>定力</span></div><div class="cpOuter"><div class="cpInner" id="composeHp"></div></div></div>
+      <button class="switchBtn" id="switchTech">切换心法 ⟳</button>
+      <div class="bphase" id="bphase"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="result"><div class="rcard" id="resultCard"></div></div>
+
+  <div class="screen" id="dialogue">
+    <canvas id="dcv"></canvas>
+    <div class="dbg" id="dbg">⛰️</div>
+    <div class="dbox">
+      <div class="dwho" id="dwho">师父</div>
+      <div class="dtext" id="dtext"></div>
+      <div class="dchoices" id="dchoices"></div>
+      <div class="dnext" id="dnext">▸ 点击继续</div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===== 法器 ===== */
+const ITEMS=[
+  {id:"beads",  emoji:"📿", name:"沉香念珠",   desc:"定力上限 +20",        apply:{maxComp:20}},
+  {id:"bell",   emoji:"🔔", name:"清心铜磬",   desc:"杂念飘行变慢 20%",    apply:{slow:0.2}},
+  {id:"staff",  emoji:"🪄", name:"降魔禅杖",   desc:"觉察伤害 +20%",       apply:{dmgMul:0.2}},
+  {id:"woodfish",emoji:"🥁",name:"古木鱼",     desc:"连击成长更快",        apply:{comboMul:0.12}},
+  {id:"lotus",  emoji:"🪷", name:"莲花座",     desc:"放下杂念回定力 +3",   apply:{lotusHeal:3}},
+  {id:"sutra",  emoji:"📜", name:"般若经卷",   desc:"获得经验 +25%",       apply:{expMul:0.25}},
+  {id:"relic",  emoji:"🪞", name:"无明业镜",   desc:"伤害+15% 定力+15",    apply:{dmgMul:0.15,maxComp:15}},
+];
+const DROPS=["beads","bell","staff","woodfish","lotus","sutra"]; // 主线6关掉落
+const getItem=id=>ITEMS.find(i=>i.id===id);
+
+/* ===== 技法 ===== */
+const TECHS=[
+  {name:"自然呼吸",color:"#7fd1c1",inhale:4,hold1:0,exhale:4,hold2:0,dmg:14,heal:0,how:"选一个锚点(鼻端气息的进出)，注意力放上去。一旦发现走神，不责备，轻轻把心带回呼吸。"},
+  {name:"腹式深呼吸",color:"#8fc6ff",inhale:4,hold1:1,exhale:6,hold2:0,dmg:18,heal:0,how:"吸气让腹部像气球鼓起，呼气拉得比吸气更长。长呼气激活副交感神经，给身体『安全』的信号。"},
+  {name:"箱式呼吸",color:"#ffb27a",inhale:4,hold1:4,exhale:4,hold2:4,dmg:16,heal:0,how:"吸4—屏4—呼4—屏4，像描一个正方形。给冲动一个缓冲，让理智回到驾驶座。"},
+  {name:"觉知观息",color:"#c8a6ff",inhale:5,hold1:2,exhale:7,hold2:0,dmg:21,heal:0,how:"念头像河里的落叶，不抓也不推，只是看着它漂过。你不是念头，你是看着念头的那份觉知。"},
+  {name:"觉醒呼吸",color:"#ffe07a",inhale:3,hold1:0,exhale:3,hold2:0,dmg:11,heal:0,how:"昏沉时挺直脊背，用短促有力的呼吸，把注意力放在身体清醒的感觉上，重新点亮觉知。"},
+  {name:"慈心呼吸",color:"#ff9ecb",inhale:4,hold1:2,exhale:6,hold2:0,dmg:17,heal:7,how:"呼气时默念：愿我安乐，愿众生安乐。心向外敞开时，『我』的牢笼会自然松动，每次呼气也疗愈自己。"},
+];
+
+/* ===== 关卡 ===== */
+const LEVELS=[
+  {id:0,sky:"dawn",name:"初心谷",demonName:"散乱·掉举魔",demonEmoji:"🐒",demonColor:"#8db4d8",demonHp:80,tech:0,eyes:2,spikes:0,
+   intro:[{who:"山中老者",text:"第一关最轻，却最磨人。你看那只猴子一样的东西——它叫『散乱』。"},
+          {who:"山中老者",text:"你白天开十个标签页，吃饭刷手机，睡前还惦记着没回的消息。它，就是这么被你一口口喂大的。"},
+          {who:"山中老者",text:"别想着抓住它、打死它。只要它一跑，你就轻轻把心带回呼吸。一次，再一次。"}],
+   win:[{who:"你",text:"奇怪……刚才那一瞬，脑子里居然是空的。安静得，我都有点不习惯。"},
+        {who:"山中老者",text:"那不是空，是『在』。你第一次，真正待在了当下——哪怕只有一瞬。"},
+        {who:"山中老者",text:"记住这一瞬的味道。往后每次走神，它都会替你点亮回家的路。"}],
+   lesson:[{badge:"心魔解析",title:"散乱",body:"心像一只猴子，上蹿下跳，注意力不停被念头拉走。<span class='hl'>这不是你的错</span>——大脑天生如此。<br><br>冥想从来不是『清空念头』，而是练习：当心跑掉，一次次<span class='hl'>温柔地把它带回来</span>。"},
+           {badge:"修习心法",title:"自然呼吸",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>跟随光环呼吸，在<b>呼气</b>时点击屏幕释放『觉察之力』；杂念气泡飘来时<b>点掉它们</b>(放下)，别让它们扰乱定力。"}],
+   insight:"每一次把跑掉的注意力带回呼吸，都是一次心的锻炼。觉察到散乱，就已经回来了。"},
+
+  {id:1,sky:"morning",name:"浮躁滩",demonName:"焦虑·忧惧魔",demonEmoji:"🌀",demonColor:"#7e9be0",demonHp:115,tech:1,eyes:3,spikes:0,
+   intro:[{who:"山中老者",text:"往上走，水汽更重了。感觉到胸口发紧了吗？"},
+          {who:"你",text:"……有点喘不过气。好像，有什么坏事马上要发生。"},
+          {who:"山中老者",text:"那是『焦虑』。它在替一个并不存在的危险拉警报，你的身体信了，于是整个绷紧。"},
+          {who:"山中老者",text:"你骗不过它，也吵不赢它。但你能用很长、很长的呼气，告诉它：现在，是安全的。"}],
+   win:[{who:"你",text:"把呼气拉长之后……心跳，真的慢下来了。"},
+        {who:"山中老者",text:"身体比脑子诚实。你安抚的不是想法，是那只一直紧张兮兮、拼命想保护你的小动物。"},
+        {who:"山中老者",text:"对它温柔点。说到底，它只是太爱你了。"}],
+   lesson:[{badge:"心魔解析",title:"焦虑",body:"焦虑时身体进入<span class='hl'>『战或逃』</span>模式：呼吸变浅变快、心跳加速、思绪打转。<br><br>它本是保护我们的远古机制，只是在现代生活里<span class='hl'>误报警了</span>。"},
+           {badge:"修习心法",title:"腹式深呼吸",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>这只心魔会喷出更多杂念。用<b>长长的呼气</b>稳住自己——呼气时释放，吸气时安住，定力自会回升。"}],
+   insight:"你无法命令焦虑离开，但可以通过拉长呼气，温柔地告诉身体：现在是安全的。"},
+
+  {id:2,sky:"dusk",name:"愤怒之渊",demonName:"嗔火·暴怒魔",demonEmoji:"👹",demonColor:"#e0714f",demonHp:150,tech:2,eyes:2,spikes:5,
+   intro:[{who:"山中老者",text:"小心脚下，这里的火，是从地缝里往上冒的。"},
+          {who:"你",text:"（你想起白天被人指着鼻子骂的那一刻，拳头又不自觉地攥紧了）"},
+          {who:"山中老者",text:"看，光是想起来，火就又烧上来了。『嗔火』烧的从来不是别人，是你自己的五脏六腑。"},
+          {choice:[
+            {label:"「我就是忍太多，才会爆。」",tag:"soft",then:[{who:"山中老者",text:"忍，是把火咽下去，迟早烧穿你自己。我说的不是忍——是看着它，等它自己小下去。"}]},
+            {label:"「那我该怎么办？」",tag:"clear",then:[{who:"山中老者",text:"别急着扑灭，也别浇油。就在它和你之间，留出一道缝来。"}]},
+          ]},
+          {who:"山中老者",text:"它来得快。你要的不是『忍』，是在它和你的反应之间撑开一道缝——四秒，就够理智回来。"}],
+   win:[{who:"你",text:"我……没有像往常那样炸出去。那道缝，真的有用。"},
+        {who:"山中老者",text:"愤怒本身没有错，它在提醒你：边界被冒犯了。错的，是被它牵着鼻子走。"},
+        {who:"山中老者",text:"你今天，第一次牵住了它的手，而不是被它拖着跑。"}],
+   lesson:[{badge:"心魔解析",title:"愤怒",body:"愤怒来得又快又烫，常让我们<span class='hl'>做出事后后悔的事</span>。<br><br>『愤怒是拿别人的错误惩罚自己。』它需要的不是压抑，而是<span class='hl'>一个缓冲的空间</span>。"},
+           {badge:"修习心法",title:"箱式呼吸",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>嗔火魔攻势猛烈。靠规律的<b>四四呼吸</b>稳住节奏，在刺激与反应之间撑开缝隙。"}],
+   insight:"在刺激和反应之间有一道缝隙，那里藏着我们的自由与成长。呼吸，就是撑开它的手。"},
+
+  {id:3,sky:"fog",name:"妄念林",demonName:"妄念·思绪魔",demonEmoji:"🕸️",demonColor:"#a98fd6",demonHp:175,tech:3,eyes:4,spikes:0,
+   intro:[{who:"山中老者",text:"这片林子，最容易迷路。你听——"},
+          {who:"旁白",text:"林子里全是声音。是你自己的声音，反反复复念着昨天的懊悔、明天的担忧。"},
+          {who:"山中老者",text:"『妄念』最毒的一句谎话是：『这些念头，就是我。』"},
+          {who:"山中老者",text:"可你想想——能听见这些念头的，又是谁呢？念头来来去去，那个听着的，从没动过。"}],
+   win:[{who:"你",text:"原来……我可以只是看着它们，不必跟着跑。"},
+        {who:"山中老者",text:"你是天空，念头是云。今天，你终于站回了天空的位置。"},
+        {who:"旁白",text:"转身时，林子深处似乎有个小小的身影一闪而过，蹲着，抱着膝盖。你眨眨眼，什么也没有了。"},
+        {who:"山中老者",text:"（他望着你，欲言又止）你越来越像……唔，没什么。再往上走走吧。"}],
+   lesson:[{badge:"心魔解析",title:"妄念",body:"念头一个接一个，像滚雪球，把你卷进过去的懊悔与未来的担忧。<br><br>关键的领悟是：<span class='hl'>你不是你的念头</span>。念头来来去去，而那个<span class='hl'>觉知到念头的『你』</span>，始终在。"},
+           {badge:"修习心法",title:"觉知观息",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>不要和每个杂念搏斗，而是<b>看着它、放下它</b>。在悠长的呼气里安住觉知，妄念魔便无处附着。"}],
+   insight:"念头是天空里的云，而你是天空。云来云去，天空从未被弄脏。"},
+
+  {id:4,sky:"night",name:"昏沉窟",demonName:"昏沉·懈怠魔",demonEmoji:"🌑",demonColor:"#5b6480",demonHp:160,tech:4,eyes:1,spikes:0,
+   intro:[{who:"山中老者",text:"奇怪，这一关没有声音，只有……困。"},
+          {who:"你",text:"（眼皮发沉）我好累……能不能，就在这儿，睡一会儿。"},
+          {who:"山中老者",text:"这就是『昏沉』。它不吵不闹，只是悄悄地，把你心里的灯一盏盏吹灭。"},
+          {who:"山中老者",text:"挺直背，把呼吸打得明快些。修行不是瘫软，是清醒地、放松地，亮着。"}],
+   win:[{who:"你",text:"清醒过来的这种感觉……比咖啡还提神。"},
+        {who:"山中老者",text:"太紧会散乱，太松会昏沉。你今天，摸到了中间那条线——不紧、不松，了了分明。"},
+        {who:"山中老者",text:"快到山顶了。最难的那一关，正在上面等你。"}],
+   lesson:[{badge:"心魔解析",title:"昏沉",body:"修行的另一个对手不是杂念，而是<span class='hl'>昏沉与倦怠</span>——昏昏欲睡、提不起劲、心识变得迟钝模糊。"},
+           {badge:"修习心法",title:"觉醒呼吸",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>节奏更快更短。保持<b>明快的呼吸</b>与挺直的脊背，用清醒的觉知之光驱散这片暗。"}],
+   insight:"觉知既要放松，也要明亮。太紧则散乱，太松则昏沉，中道之处，心自清明。"},
+
+  {id:5,sky:"cosmic",name:"灵峰·见性台",demonName:"我执·分别魔",demonEmoji:"👁️",demonColor:"#c8b6ff",demonHp:230,tech:5,eyes:3,spikes:0,
+   intro:[{who:"旁白",text:"山顶的风很大。云在脚下翻涌，你能看见很远——也包括，很多年前的自己。"},
+          {who:"旁白",text:"这一次，那个小小的身影没有跑。它就蹲在云雾里，抬眼望着你——是小时候的你，眼里有话，却没说出口。"},
+          {who:"山中老者",text:"到这儿了。这一关，没有别的敌人。"},
+          {who:"你",text:"那……它是什么？"},
+          {who:"山中老者",text:"是『我』。是你这一路，一直拼命想保护、想证明、想成全的那个『我』。"},
+          {who:"山中老者",text:"它不靠打。你越用力，它越实。这一战，靠的是松开手——靠慈悲。"},
+          {who:"山中老者",text:"先对自己，说一句：愿我安乐。"},
+          {choice:[
+            {label:"「愿我安乐。」",tag:"warm",then:[{who:"山中老者",text:"听见了。你的声音在抖，但你说出来了。这四个字，你欠自己，很久了。"}]},
+            {label:"（喉咙发紧，说不出口）",tag:"soft",then:[{who:"山中老者",text:"说不出来，也没关系。光是『愿意试』，你攥得发白的那只手，就已经松开了一点。"}]},
+          ]},
+          {who:"山中老者",text:"说得出口，你就已经赢了一半。"}],
+   win:[{who:"你",text:"（眼眶发热）我……已经很久很久，没有对自己，好好说过一句话了。"},
+        {who:"山中老者",text:"你一直对全世界温柔，唯独忘了——你自己，也是这『众生』里的一个。"},
+        {who:"山中老者",text:"六只心魔，今日皆伏。可是孩子……你真以为，这就到顶了吗？"}],
+   lesson:[{badge:"心魔解析",title:"我执",body:"最后、也最深的心魔，是<span class='hl'>『我执』</span>——把那个『我』看得太重、太实，于是一切顺逆都成了它的得失。<br><br>它降伏不靠对抗，而靠<span class='hl'>敞开与慈悲</span>。"},
+           {badge:"修习心法",title:"慈心呼吸",body:"TECH_HOW<br><br><span class='hl'>战斗中：</span>每次呼气默念祝愿，<b>释放的同时也疗愈自己</b>。当心向众生敞开，紧握的『我』便会松开。"}],
+   insight:"愿我安乐，愿你安乐，愿一切众生安乐。当心不再只为『我』而紧握，自由便在敞开处生起。"},
+
+  /* 隐藏 Boss */
+  {id:6,hidden:true,sky:"void",name:"封印·无明之地",demonName:"无明·根本魔",demonEmoji:"🪞",demonColor:"#b39ddb",demonHp:320,tech:5,eyes:5,spikes:3,
+   intro:[{who:"山中老者",text:"你回头，看看山顶之上。"},
+          {who:"旁白",text:"云开了一道缝。云缝之上，是一片没有星光的、绝对的暗。"},
+          {who:"山中老者",text:"那里，住着一切心魔的根——『无明』。看不清真相的那层雾。"},
+          {who:"山中老者",text:"前面的魔，是你的情绪。这一只，是你看世界的那副、早已蒙了尘的眼镜，本身。"},
+          {who:"山中老者",text:"这一战，我帮不了你，连话，也快说不动了。带着你学的一切，自己上去吧。"}],
+   lesson:[{badge:"根本心魔",title:"无明",body:"前面所有心魔，都从这里生出——<span class='hl'>无明</span>，即『看不清真相』。<br><br>因为看不清，我们才把念头当成自己、把无常当成永恒、把『我』抓得死紧。"},
+           {badge:"破魔之法",title:"慈心 × 觉知",body:"TECH_HOW<br><br><span class='hl'>决战：</span>它血厚、念多。唯有<b>稳住慈心呼吸</b>、不被任何杂念带走，以了了分明的觉知，照破这层迷雾。"}],
+   insight:"无明非敌，照之即明。当你清清楚楚地看见一切如其所是，心魔便失去了立足之地——这，就是开悟的一瞥。"},
+];
+
+/* ===== 剧情 ===== */
+const STORY_INTRO=[
+  {who:"旁白",text:"早上七点，闹钟第三次响起。你早就醒了，只是不想起来。"},
+  {who:"旁白",text:"地铁里，你刷着永远刷不完的屏幕，却一条都没真正看进去。"},
+  {who:"旁白",text:"老板的消息弹出来。你的胃，不自觉地缩了一下。"},
+  {who:"旁白",text:"深夜一点四十七。你躺在床上，脑子像一台停不下来的机器，轰隆作响。"},
+  {who:"旁白",text:"你已经记不清，上一次『什么都不想』，是什么时候了。"},
+  {who:"旁白",text:"不知何时，你合上了眼。再睁开——你站在一座望不到顶的山脚下。"},
+  {who:"旁白",text:"雾很重。山在缓缓起伏，像一头活着的巨兽，正不紧不慢地呼吸。"},
+  {who:"山中老者",text:"来了？我等你，很久了。"},
+  {who:"你",text:"这是……哪儿？"},
+  {choice:[
+    {label:"「我是不是在做梦？」",tag:"clear",then:[{who:"山中老者",text:"是不是梦，重要吗？你此刻在这儿，这就够了。"}]},
+    {label:"「我想离开这里。」",tag:"soft",then:[{who:"山中老者",text:"想走？可你来到这儿，不正是因为——你在哪儿，都待不住吗？"}]},
+  ]},
+  {who:"山中老者",text:"这座山叫『心山』。说它在远方也行，说它就在你胸口三寸之内——也行。"},
+  {who:"山中老者",text:"你最近很累吧。睡不好，静不下来，总被一些说不清的东西，在背后追着跑。"},
+  {who:"你",text:"……你怎么知道。"},
+  {who:"山中老者",text:"因为这山上的每一只心魔，都是你自己亲手喂大的。它们住在这山里，也住在你心里。"},
+  {who:"山中老者",text:"我没法替你打。我只能教你呼吸，教你『看』。剩下的路，得你自己一步一步爬上去。"},
+  {who:"山中老者",text:"先记住一句话，往后你会一次次用到它——"},
+  {who:"山中老者",text:"『你，不是你的念头。你是那个，一直在背后看着念头的觉知。』"},
+  {who:"山中老者",text:"上山吧，{name}。"},
+];
+const END_CODA={
+  warm:[
+    {who:"旁白",text:"老者与孩子，都化作一片暖光，融进了你的胸口。山、雾、风，渐渐淡去。"},
+    {who:"山中老者",text:"（声音越来越远）醒来吧。把这盏灯，带回你的生活里去……"},
+    {who:"旁白",text:"你睁开眼。还是那个深夜，那个房间。可有什么，已经不一样了。"},
+    {who:"旁白",text:"你深深吸了一口气——这一次，你清清楚楚地，知道自己正在呼吸。"},
+    {who:"旁白",text:"【结局 · 圆满慈心】你终于学会，先对自己温柔。"},
+    {who:"旁白",text:"—— 修行没有终点。每一次呼吸，都是一个新的开始。"},
+  ],
+  clear:[
+    {who:"旁白",text:"暖光散去。你没有变成另一个人——你只是，第一次看清了本来的自己。"},
+    {who:"山中老者",text:"（声音渐远）念头还会来，情绪还会起。但你已经知道：你，是那片看着它们的天空。"},
+    {who:"旁白",text:"你睁开眼。窗外天快亮了。脑子里那台轰鸣的机器，第一次，安静了下来。"},
+    {who:"旁白",text:"【结局 · 明心觉照】你学会了，看清，而不被卷走。"},
+    {who:"旁白",text:"—— 修行没有终点。每一次呼吸，都是一次清醒的选择。"},
+  ],
+  soft:[
+    {who:"旁白",text:"暖光淡去，你的心里，却还留着一丝没说出口的怯。"},
+    {who:"山中老者",text:"（声音渐远）你还没有完全放下。山下的烦恼，明天照样会回来。"},
+    {who:"山中老者",text:"（声音渐远）但你的口袋里，从此多了一盏灯。累了的时候，记得，把它点亮……"},
+    {who:"旁白",text:"你睁开眼。还是那个房间。你没有立刻好起来——但你知道了，回家的路，在哪儿。"},
+    {who:"旁白",text:"【结局 · 初心微光】你迈出了，最难的第一步。"},
+    {who:"旁白",text:"—— 修行没有终点。慢一点，也没关系。"},
+  ],
+};
+function buildEnding(){ let dom="warm",mx=-1; for(const k of ["warm","clear","soft"]){ if((S.choices[k]||0)>mx){ mx=S.choices[k]||0; dom=k; } } S.ending=dom; save(); return STORY_END_BASE.concat(END_CODA[dom]); }
+const STORY_END_BASE=[
+  {who:"旁白",text:"当最后一缕迷雾散去，无明没有倒下——它只是，变得透明了。"},
+  {who:"旁白",text:"透过那片透明，你看见一直静静站在你身后的师父。"},
+  {who:"你",text:"师父，我赢了……师父？你的身子，怎么有点透明……"},
+  {who:"山中老者",text:"哈哈。孩子，现在，可以告诉你了。"},
+  {who:"山中老者",text:"我从来，不住在这座山上。"},
+  {who:"山中老者",text:"还记得第一晚我说的话吗——『你不是你的念头，你是那个看着念头的觉知。』"},
+  {who:"山中老者",text:"那份觉知，从你出生起就在。它看着你哭、看着你笑，看着你被一只只心魔追得满山跑——从未离开，也从未责怪过你一句。"},
+  {who:"山中老者",text:"它，就是我。而我，就是你——那个一直清醒着、一直慈悲地，看着你的，你自己。"},
+  {who:"你",text:"所以……这座山，这一路的修行……"},
+  {who:"山中老者",text:"山，是你的心。魔，是你的执。路，是你自己一步步走出来的。我，不过是你心里那盏，一直没熄的灯。"},
+  {who:"旁白",text:"光散去之前，你最后看了一眼。师父身旁，站着那个蹲在角落里的小孩——很多年前的你，正仰起头，对你笑。"},
+  {choice:[
+    {label:"「对不起，让你等了这么久。」",tag:"warm",then:[{who:"旁白",text:"小孩摇摇头，朝你伸出了手。"}]},
+    {label:"「谢谢你，一直没有走。」",tag:"warm",then:[{who:"旁白",text:"小孩的眼睛亮了，朝你伸出了手。"}]},
+  ]},
+  {who:"旁白",text:"你蹲下身，第一次，紧紧抱住了那个一直没人抱过的小孩。"},
+];
+
+/* ===== 成就 ===== */
+const ACH=[
+  {id:"first",icon:"🌱",name:"初入心山",desc:"降伏第一只心魔",f:s=>s.cleared>=0},
+  {id:"half",icon:"⛰️",name:"半山有路",desc:"降伏3只心魔",f:s=>s.cleared>=2},
+  {id:"all6",icon:"🏔️",name:"登临灵峰",desc:"降伏全部6只心魔",f:s=>s.cleared>=5},
+  {id:"hidden",icon:"🪞",name:"照破无明",desc:"降伏隐藏心魔",f:s=>s.cleared>=6},
+  {id:"combo8",icon:"🔥",name:"心流不断",desc:"单场连击达到8",f:s=>s.stats.maxCombo>=8},
+  {id:"nohit",icon:"💎",name:"如如不动",desc:"满定力通关一关",f:s=>s.stats.noHitClears>=1},
+  {id:"th100",icon:"🍃",name:"放下百念",desc:"累计放下100个杂念",f:s=>s.stats.totalThoughts>=100},
+  {id:"lv10",icon:"🧘",name:"道心渐成",desc:"修为达到10级",f:s=>s.lv>=10},
+  {id:"gear4",icon:"📿",name:"法器加身",desc:"集齐4件法器",f:s=>Object.keys(s.owned).length>=4},
+  {id:"gearAll",icon:"🌟",name:"法宝圆满",desc:"集齐全部法器",f:s=>Object.keys(s.owned).length>=ITEMS.length},
+];
+
+/* ===== 存档 ===== */
+const SAVE_KEY="xinshan_rpg_v2";
+const DEFAULT={ cleared:-1, lv:1, exp:0, energy:0, maxComp:100, unlockedTech:[0],
+  sound:true, voice:true, seenIntro:false, seenEnd:false, compUp:0, name:"", role:"",
+  owned:{}, equipped:[], ach:{}, records:{}, choices:{warm:0,clear:0,soft:0}, ending:"",
+  stats:{totalThoughts:0,maxCombo:0,noHitClears:0,wins:0},
+  daily:{date:"",kills:0,maxCombo:0,thoughts:0,claimed:{}} };
+let S=load();
+function load(){ try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s){ const m=Object.assign({},DEFAULT,s);
+  m.stats=Object.assign({},DEFAULT.stats,s.stats); m.daily=Object.assign({},DEFAULT.daily,s.daily); m.choices=Object.assign({warm:0,clear:0,soft:0},s.choices); return m; } }catch(e){} return JSON.parse(JSON.stringify(DEFAULT)); }
+const ROLES=[
+  {id:"worker",label:"上班族 💼",pain:"老板的消息弹出来。你的胃，不自觉地缩了一下。"},
+  {id:"student",label:"学生 🎓",pain:"导师的邮件弹出来。deadline 像影子，压在你的后背上。"},
+  {id:"founder",label:"创业者 🚀",pain:"投资人的消息弹出来。账上的数字，又在你脑子里跳了一遍。"},
+  {id:"freelancer",label:"自由职业 🎨",pain:"甲方的消息弹出来。『再改一版』五个字，让你太阳穴一跳。"},
+  {id:"parent",label:"为人父母 🍼",pain:"孩子的哭、群里的通知、没洗的碗……你已经很久，没有一刻属于自己。"},
+];
+function applyTokens(t){ return (t||"").replace(/\{name\}/g, S.name||"孩子").replace(/\{rolePain\}/g, (ROLES.find(r=>r.id===S.role)||ROLES[0]).pain); }
+function save(){ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }
+function expNeed(lv){ return 40+lv*30; }
+function realmName(lv){ return ["凡尘","气动","渐定","心定","花开","明心","空明"][Math.min(6,Math.floor((lv-1)/2))]; }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+
+/* ===== 法器加成 ===== */
+function bonus(){ const b={maxComp:0,dmgMul:0,comboMul:0,lotusHeal:0,expMul:0,slow:0};
+  for(const id of S.equipped){ const it=getItem(id); if(it) for(const k in it.apply) b[k]+=it.apply[k]; } return b; }
+
+/* ===== 工具 ===== */
+const $=id=>document.getElementById(id);
+let curScreen="title";
+function show(name){ $(curScreen).classList.remove("active"); curScreen=name; $(name).classList.add("active"); }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),1900); }
+
+/* ===== 音频：多场景配乐 ===== */
+let actx=null,music=null,curMood="zen",curBase=0;
+function ensureAudio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx&&actx.state==="suspended") actx.resume(); }
+const MOODS={
+  zen:    {root:220, pad:[0,4,7,11],  scale:[0,2,4,7,9],    step:820, type:"sine",     padGain:.045, arpGain:.085, lp:1300},
+  story:  {root:196, pad:[0,3,7,10],  scale:[0,3,5,7,10],   step:1400,type:"sine",     padGain:.04,  arpGain:.05,  lp:950},
+  battle: {root:110, pad:[0,3,7,10],  scale:[0,2,3,7,10],   step:500, type:"triangle", padGain:.05,  arpGain:.06,  lp:1500},
+  ending: {root:262, pad:[0,4,7,11],  scale:[0,2,4,7,9,12], step:720, type:"sine",     padGain:.055, arpGain:.10,  lp:2200},
+};
+function ntf(root,semi){ return root*Math.pow(2,semi/12); }
+function playMusic(mood,base){ if(mood) curMood=mood; if(base!==undefined) curBase=base||0;
+  if(!S.sound) return; ensureAudio(); if(!actx) return;
+  stopMusic(true);
+  const M=MOODS[curMood]||MOODS.zen, root=curBase||M.root;
+  const master=actx.createGain(); master.gain.value=0; master.connect(actx.destination); master.gain.linearRampToValueAtTime(1,actx.currentTime+1.8);
+  const lp=actx.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=M.lp; lp.connect(master);
+  const pad=actx.createGain(); pad.gain.value=M.padGain; pad.connect(lp);
+  const oscs=M.pad.map(off=>{ const o=actx.createOscillator(); o.type="sine"; o.frequency.value=ntf(root,off); const g=actx.createGain(); g.gain.value=.5; o.connect(g); g.connect(pad); o.start(); return o; });
+  const lfo=actx.createOscillator(); lfo.frequency.value=.07; const lg=actx.createGain(); lg.gain.value=M.padGain*.4; lfo.connect(lg); lg.connect(pad.gain); lfo.start();
+  const mref={};
+  const timer=setInterval(()=>{ if(!music||music.id!==mref||!actx) return;
+    const semi=M.scale[Math.floor(Math.random()*M.scale.length)]+12*(Math.random()<.4?1:0);
+    const o=actx.createOscillator(); o.type=M.type; o.frequency.value=ntf(root,semi+12);
+    const g=actx.createGain(); g.gain.value=0; o.connect(g); g.connect(lp);
+    const t=actx.currentTime; g.gain.linearRampToValueAtTime(M.arpGain,t+.03); g.gain.exponentialRampToValueAtTime(.0001,t+M.step/1000*1.3);
+    o.start(t); o.stop(t+M.step/1000*1.45); }, M.step);
+  music={id:mref,master,oscs,lfo,timer};
+}
+function stopMusic(immediate){ if(!music||!actx) return; const m=music; music=null; clearInterval(m.timer);
+  const t=actx.currentTime; try{ m.master.gain.cancelScheduledValues(t); m.master.gain.linearRampToValueAtTime(0,t+(immediate?.25:.8)); }catch(e){}
+  setTimeout(()=>{ try{ m.oscs.forEach(o=>o.stop()); m.lfo.stop(); }catch(e){} }, immediate?320:900); }
+function startAmbient(base){ playMusic("battle",base); }
+function stopAmbient(){ stopMusic(); }
+function bell(freq,vol){ if(!S.sound) return; ensureAudio(); if(!actx) return;
+  const o=actx.createOscillator(); o.type="sine"; o.frequency.value=freq||528; const g=actx.createGain(); g.gain.value=0; o.connect(g); g.connect(actx.destination);
+  const t=actx.currentTime; g.gain.linearRampToValueAtTime(vol||.22,t+.02); g.gain.exponentialRampToValueAtTime(.0001,t+1.8); o.start(t); o.stop(t+1.9); }
+function thud(){ if(!S.sound) return; ensureAudio(); if(!actx) return;
+  const o=actx.createOscillator(); o.type="triangle"; o.frequency.value=90; const g=actx.createGain(); g.gain.value=.18; o.connect(g); g.connect(actx.destination);
+  const t=actx.currentTime; o.frequency.exponentialRampToValueAtTime(40,t+.2); g.gain.exponentialRampToValueAtTime(.001,t+.25); o.start(t); o.stop(t+.26); }
+function speak(text){ if(!S.voice||!window.speechSynthesis) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="zh-CN"; u.rate=.8; speechSynthesis.speak(u);}catch(e){} }
+
+/* ===== 对话系统 ===== */
+let dlg=null;
+function runDialogue(lines,bg,onDone,mood,scene){ dlg={q:lines.slice(),onDone,typing:false,choosing:false,scene:scene||"fog"}; $("dbg").textContent=bg||"⛰️"; $("dchoices").innerHTML=""; $("dnext").style.display=""; playMusic(mood||"story"); show("dialogue"); sizeDcv(); if(!dlgRaf) dlgRaf=requestAnimationFrame(dlgSceneLoop); nextLine(); }
+function playSeq(seqs,finalCb){ let k=0; const next=()=>{ if(k>=seqs.length){ finalCb&&finalCb(); return; } const it=seqs[k++]; runDialogue(it.lines,it.bg,next,it.mood,it.scene); }; next(); }
+function nextLine(){ if(!dlg) return;
+  if(dlg.q.length===0){ const cb=dlg.onDone; dlg=null; cb&&cb(); return; }
+  const item=dlg.q.shift();
+  if(item.choice){ showChoices(item.choice); return; }
+  dlg.cur=item; const narr=(item.who==="旁白");
+  $("dwho").style.display=narr?"none":"block"; $("dwho").textContent=item.who||"";
+  $("dtext").classList.toggle("narrate",narr);
+  dlg.full=applyTokens(item.text); dlg.shown=""; dlg.ti=0; dlg.tacc=0; dlg.lastTs=0; dlg.typing=true;
+  $("dtext").textContent=""; requestAnimationFrame(typeLoop); }
+function typeLoop(ts){ if(!dlg||!dlg.typing) return;
+  if(!dlg.lastTs) dlg.lastTs=ts; let d=ts-dlg.lastTs; dlg.lastTs=ts; if(d>100) d=100; dlg.tacc+=d;
+  const speed=dlg.cur.who==="旁白"?24:32;
+  while(dlg.tacc>=speed && dlg.ti<dlg.full.length){ const ch=dlg.full[dlg.ti++]; dlg.shown+=ch; dlg.tacc-=speed; if("，。！？…、；：".indexOf(ch)>=0) dlg.tacc-=170; }
+  $("dtext").textContent=dlg.shown+(dlg.ti<dlg.full.length?"▌":"");
+  if(dlg.ti>=dlg.full.length){ dlg.typing=false; $("dtext").textContent=dlg.full; } else requestAnimationFrame(typeLoop); }
+function showChoices(choices){ dlg.choosing=true; $("dnext").style.display="none";
+  $("dchoices").innerHTML=choices.map((c,i)=>`<button class="dchoice" data-ci="${i}">${c.label}</button>`).join("");
+  document.querySelectorAll("#dchoices .dchoice").forEach(b=>{ b.onclick=e=>{ e.stopPropagation(); const i=+b.dataset.ci; bell(520,.07);
+    const tg=choices[i].tag; if(tg&&S.choices[tg]!=null){ S.choices[tg]++; save(); }
+    dlg.q=(choices[i].then||[]).concat(dlg.q); dlg.choosing=false; $("dchoices").innerHTML=""; $("dnext").style.display=""; nextLine(); }; }); }
+$("dialogue").onclick=()=>{ if(!dlg||dlg.choosing) return; if(dlg.typing){ dlg.typing=false; $("dtext").textContent=dlg.full; } else { bell(420,.05); nextLine(); } };
+
+/* ===== 对话动画背景 ===== */
+const dcv=$("dcv"), dctx=dcv.getContext("2d"); let dcW=0,dcH=0,dlgRaf=0,dlgParts=[];
+const SCN={
+  intro:  {sky:["#0a0e1a","#141a2e","#243450"], stars:true, fog:true, city:true},
+  dawn:   {sky:["#3a4a72","#caa0a0","#f0d9b5"], moon:true, fog:true},
+  morning:{sky:["#274472","#5a86c2","#bcd7f0"], fog:true},
+  dusk:   {sky:["#3a1f3a","#7a3550","#d98a5a"], moon:true, fog:true},
+  fog:    {sky:["#2a2f44","#4a5170","#8a90aa"], fog:true},
+  night:  {sky:["#0a1024","#1a2342","#2d3a5e"], stars:true, moon:true, fog:true},
+  cosmic: {sky:["#1a0e36","#2e1a5e","#5e3a9e"], stars:true, moon:true},
+  void:   {sky:["#060410","#1a0e2e","#34184e"], stars:true, swirl:true},
+  sunrise:{sky:["#241a3a","#9a5a6a","#f0c878"], sun:true, rays:true, fog:true},
+};
+function sizeDcv(){ const dpr=Math.min(2,window.devicePixelRatio||1); dcW=dcv.clientWidth; dcH=dcv.clientHeight; dcv.width=dcW*dpr; dcv.height=dcH*dpr; dctx.setTransform(dpr,0,0,dpr,0,0);
+  dlgParts=Array.from({length:46},()=>({x:Math.random()*dcW,y:Math.random()*dcH,r:Math.random()*1.6+.4,s:Math.random()*10+3,ph:Math.random()*7})); }
+function dlgSceneLoop(ts){ if(curScreen!=="dialogue"){ dlgRaf=0; return; } drawDlgScene(ts/1000); dlgRaf=requestAnimationFrame(dlgSceneLoop); }
+function drawDlgScene(t){ const M=SCN[(dlg&&dlg.scene)||"fog"]||SCN.fog, W=dcW, H=dcH; if(!W) return;
+  const g=dctx.createLinearGradient(0,0,0,H); g.addColorStop(0,M.sky[0]); g.addColorStop(.55,M.sky[1]); g.addColorStop(1,M.sky[2]); dctx.fillStyle=g; dctx.fillRect(0,0,W,H);
+  if(M.stars){ for(let i=0;i<70;i++){ const x=(i*73.3)%W,y=(i*131.7)%(H*0.6); dctx.fillStyle="rgba(255,255,255,"+(.22+.5*Math.sin(t*1.5+i))+")"; dctx.fillRect(x,y,1.4,1.4); } }
+  if(M.sun){ const sy=H*0.5-Math.min(1,t/6)*H*0.30, sx=W*0.5;
+    const sg=dctx.createRadialGradient(sx,sy,8,sx,sy,130); sg.addColorStop(0,"rgba(255,246,214,.95)"); sg.addColorStop(.4,"rgba(255,210,140,.55)"); sg.addColorStop(1,"rgba(255,210,140,0)"); dctx.fillStyle=sg; dctx.beginPath(); dctx.arc(sx,sy,130,0,7); dctx.fill();
+    dctx.fillStyle="rgba(255,250,232,.96)"; dctx.beginPath(); dctx.arc(sx,sy,30,0,7); dctx.fill();
+    if(M.rays){ dctx.save(); dctx.translate(sx,sy); for(let i=0;i<12;i++){ dctx.rotate(Math.PI/6+t*0.04); dctx.fillStyle="rgba(255,235,190,"+(0.04+0.035*Math.sin(t*2+i))+")"; dctx.beginPath(); dctx.moveTo(0,0); dctx.lineTo(-16,-H); dctx.lineTo(16,-H); dctx.closePath(); dctx.fill(); } dctx.restore(); }
+  } else if(M.moon){ const mx=W*0.74,my=H*0.17; const mg=dctx.createRadialGradient(mx,my,10,mx,my,62); mg.addColorStop(0,"rgba(245,245,230,.28)"); mg.addColorStop(1,"rgba(245,245,230,0)"); dctx.fillStyle=mg; dctx.beginPath(); dctx.arc(mx,my,62,0,7); dctx.fill();
+    dctx.fillStyle="rgba(245,245,230,.88)"; dctx.beginPath(); dctx.arc(mx,my,24,0,7); dctx.fill(); }
+  if(M.swirl){ dctx.save(); dctx.translate(W*0.5,H*0.38); for(let i=0;i<5;i++){ const r=40+i*26; dctx.strokeStyle="rgba(150,110,200,"+(0.12-i*0.015)+")"; dctx.lineWidth=2; dctx.beginPath(); for(let a=0;a<=7;a+=0.2){ const rr=r+Math.sin(a*3+t*1.5+i)*8, x=Math.cos(a+t*0.3+i)*rr, y=Math.sin(a+t*0.3+i)*rr*0.6; a===0?dctx.moveTo(x,y):dctx.lineTo(x,y);} dctx.stroke(); } dctx.restore(); }
+  const layers=[{y:.62,c:"rgba(16,20,34,.55)",sp:6},{y:.72,c:"rgba(10,14,26,.78)",sp:10},{y:.82,c:"rgba(6,9,16,.96)",sp:14}];
+  layers.forEach((L,li)=>{ dctx.fillStyle=L.c; dctx.beginPath(); dctx.moveTo(0,H); const base=H*L.y,peaks=4+li,off=Math.sin(t*0.1+li)*L.sp;
+    for(let i=0;i<=peaks;i++){ const x=W*i/peaks+off, h=base-Math.abs(Math.sin(i*1.3+li))*60-li*6; dctx.lineTo(x,h);} dctx.lineTo(W,H); dctx.closePath(); dctx.fill(); });
+  if(M.city){ dctx.fillStyle="rgba(8,10,18,1)"; dctx.fillRect(0,H*0.82,W,H*0.18);
+    for(let i=0;i<64;i++){ const x=(i*53.7)%W, y=H*0.84+(i%7)*5; dctx.fillStyle="rgba(255,206,124,"+(0.28+0.5*Math.abs(Math.sin(t*2+i*1.7)))+")"; dctx.fillRect(x,y,2,2);} }
+  for(const p of dlgParts){ p.y-=p.s*0.016; if(p.y<-4){ p.y=H+4; p.x=Math.random()*W; } const op=0.08+0.2*Math.abs(Math.sin(t+p.ph)); dctx.fillStyle=(M.fog?"rgba(200,210,230,":"rgba(232,200,132,")+op+")"; dctx.beginPath(); dctx.arc(p.x+Math.sin(t+p.ph)*6,p.y,p.r,0,7); dctx.fill(); }
+  const bg2=dctx.createLinearGradient(0,H*0.5,0,H); bg2.addColorStop(0,"rgba(5,7,13,0)"); bg2.addColorStop(1,"rgba(5,7,13,0.88)"); dctx.fillStyle=bg2; dctx.fillRect(0,H*0.5,W,H*0.5);
+}
+window.addEventListener("resize",()=>{ if(curScreen==="dialogue") sizeDcv(); });
+
+/* ===== 地图 ===== */
+function refreshDaily(){ if(S.daily.date!==todayStr()){ S.daily={date:todayStr(),kills:0,maxCombo:0,thoughts:0,claimed:{}}; save(); } }
+function questDone(i){ if(i===0) return S.daily.kills>=1; if(i===1) return S.daily.maxCombo>=5; return S.daily.thoughts>=20; }
+function anyQuestClaimable(){ for(let i=0;i<3;i++) if(questDone(i)&&!S.daily.claimed[i]) return true; return false; }
+function renderMap(){
+  refreshDaily();
+  $("mLv").textContent=S.lv; $("mRealm").textContent=realmName(S.lv);
+  $("mEnergy").textContent=S.energy; $("mComp").textContent=S.maxComp+bonus().maxComp;
+  $("questBtn").classList.toggle("alert",anyQuestClaimable());
+  let h="";
+  LEVELS.forEach((lv,i)=>{
+    if(lv.hidden && S.cleared<5) return; // 隐藏关：通关前6关后才显形
+    const cleared=S.cleared>=i, unlocked=S.cleared>=i-1;
+    const cls=(lv.hidden?"hidden ":"")+(cleared?"cleared":(unlocked?"":"locked"));
+    const tag=cleared?"✓ 已降伏":(unlocked?"挑战 ⚔️":"🔒 未解锁");
+    h+=`<div class="node ${cls}" data-i="${i}"><div class="tag">${tag}</div><div class="row"><div class="face">${lv.demonEmoji}</div><div class="info"><div class="nm">${lv.hidden?"✦ 隐藏 · "+lv.name:"第"+(i+1)+"关 · "+lv.name}</div><div class="de">心魔：${lv.demonName}</div></div></div></div>`;
+  });
+  $("pathList").innerHTML=h;
+  document.querySelectorAll("#pathList .node").forEach(n=>{ n.onclick=()=>{ const i=+n.dataset.i; if(S.cleared>=i-1) preLevel(i); else toast("需先降伏前一关的心魔"); }; });
+}
+function preLevel(i){ // 首次进入播放剧情
+  const lv=LEVELS[i]; const key="introSeen_"+i;
+  if(lv.intro && !S[key]){ S[key]=true; save(); runDialogue(lv.intro, lv.demonEmoji, ()=>enterLesson(i), "story", lv.sky); }
+  else enterLesson(i);
+}
+
+/* ===== 微课 ===== */
+let lessonState=null;
+function enterLesson(i){ const lv=LEVELS[i]; lessonState={i,page:0,cards:lv.lesson.map(c=>({...c,body:c.body.replace("TECH_HOW",TECHS[lv.tech].how)}))}; show("lesson"); renderLesson(); }
+function renderLesson(){ const {cards,page}=lessonState,c=cards[page];
+  $("lessonCard").innerHTML=`<div class="badge">${c.badge}</div><h2>${c.title}</h2><p>${c.body}</p>`;
+  $("lessonDots").innerHTML=cards.map((_,k)=>`<div class="ldot ${k===page?'on':''}"></div>`).join("");
+  $("lessonNext").textContent=page<cards.length-1?"下 一 步":"开 始 挑 战 ⚔️"; }
+$("lessonNext").onclick=()=>{ if(lessonState.page<lessonState.cards.length-1){ lessonState.page++; renderLesson(); } else startBattle(lessonState.i); };
+$("lessonBack").onclick=()=>{ renderMap(); playMusic("zen"); show("map"); };
+
+/* ===== 战斗 ===== */
+const cv=$("bcv"),ctx=cv.getContext("2d");
+let W=0,H=0,DPR=1;
+function sizeCanvas(){ DPR=Math.min(2,window.devicePixelRatio||1); W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+window.addEventListener("resize",()=>{ if(curScreen==="battle"){ sizeCanvas(); if(B){ B.player.x=W/2; B.player.y=H-130; B.demon.x=W/2; B.demon.y=H*0.3; } } });
+const THOUGHTS=["工作没做完","他凭什么","完蛋了","好无聊","手机响了","我做不到","等下吃什么","为什么是我","好困啊","别人比我强","万一失败呢","静不下来","我是不是很差","好烦","受不了了"];
+let B=null,screenShake=0;
+function startBattle(i){
+  const lv=LEVELS[i]; show("battle"); sizeCanvas(); const bo=bonus();
+  B={ i, lv, t:0, last:performance.now(), running:true, over:false, startT:performance.now(),
+    tech:lv.tech, maxComp:S.maxComp+bo.maxComp, comp:S.maxComp+bo.maxComp, bo, tookHit:false,
+    demon:{x:W/2,y:H*0.3,hp:lv.demonHp,maxHp:lv.demonHp,shake:0,color:lv.demonColor,eyes:lv.eyes,spikes:lv.spikes},
+    player:{x:W/2,y:H-130,aura:36,glow:0},
+    phases:[],phaseIdx:0,phaseT:0,releasedThis:false,
+    thoughts:[],waves:[],floats:[],particles:[],sparks:[],light:[],
+    spawnT:2.4,combo:0,comboTimer:0,roarT:4.4,maxCombo:0,flash:0,flashCol:"#fff",
+    introDur:1.6, win:false, outroT:0, demonAlpha:1 };
+  buildPhases();
+  $("demonName").textContent=lv.demonName; $("techLab").textContent="心法："+TECHS[lv.tech].name;
+  $("bSound").textContent=S.sound?"🔊":"🔇"; $("bVoice").textContent=S.voice?"🗣️":"🔇";
+  playMusic("battle",90+i*8);
+  for(let k=0;k<44;k++) B.particles.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.6+.4,s:Math.random()*8+2});
+  requestAnimationFrame(battleLoop);
+}
+function buildPhases(){ const tc=TECHS[B.tech]; const p=[{n:"吸 气",t:tc.inhale,k:"in"}];
+  if(tc.hold1>0) p.push({n:"屏 息",t:tc.hold1,k:"hold",after:"in"}); p.push({n:"呼 气",t:tc.exhale,k:"out"});
+  if(tc.hold2>0) p.push({n:"屏 息",t:tc.hold2,k:"hold",after:"out"}); B.phases=p; B.phaseIdx=0; B.phaseT=0; }
+function battleLoop(now){ if(!B||!B.running) return; let dt=(now-B.last)/1000; if(dt>.05) dt=.05; B.last=now; B.t+=dt;
+  if(B.over){ B.outroT+=dt; updateOutro(dt); drawBattle(); drawOutro(); const dur=B.win?1.9:1.1;
+    if(B.outroT>=dur){ B.running=false; finishBattle(B.win); return; } requestAnimationFrame(battleLoop); return; }
+  if(B.t>=B.introDur) updateBattle(dt); else updateIntro(dt);
+  drawBattle(); requestAnimationFrame(battleLoop); }
+function updateIntro(dt){ const d=B.demon; d.shake=Math.max(0,d.shake-dt*6);
+  for(const pa of B.particles){ pa.y-=pa.s*dt*4; if(pa.y<-4){ pa.y=H+4; pa.x=Math.random()*W; } } }
+
+function updateBattle(dt){
+  const tc=TECHS[B.tech],d=B.demon,p=B.player;
+  B.phaseT+=dt; const ph=B.phases[B.phaseIdx];
+  if(B.phaseT>=ph.t){ B.phaseIdx=(B.phaseIdx+1)%B.phases.length; B.phaseT=0; const np=B.phases[B.phaseIdx];
+    if(np.k==="out") B.releasedThis=false; speak(np.n.replace(/\s/g,"")); bell(np.k==="in"?523:np.k==="out"?392:466,.12); }
+  const cur=B.phases[B.phaseIdx]; const minA=30,maxA=70; let ta;
+  if(cur.k==="in") ta=minA+(maxA-minA)*Math.min(1,B.phaseT/cur.t);
+  else if(cur.k==="out") ta=maxA-(maxA-minA)*Math.min(1,B.phaseT/cur.t);
+  else ta=cur.after==="in"?maxA:minA;
+  p.aura+=(ta-p.aura)*Math.min(1,dt*8); p.glow=Math.max(0,p.glow-dt*2);
+  $("bphase").textContent=cur.k==="out"?"呼 气 · 点击释放":cur.n;
+  d.shake=Math.max(0,d.shake-dt*6);
+  B.roarT-=dt; if(B.roarT<=0){ B.roarT=3.2+Math.random()*2; roar(2+Math.floor((1-d.hp/d.maxHp)*3)); }
+  const hpR=d.hp/d.maxHp; B.spawnT-=dt; if(B.spawnT<=0){ B.spawnT=2.4*hpR+0.9; spawnThought(); }
+  const slow=1-B.bo.slow;
+  for(const th of B.thoughts){ if(th.dead) continue; th.life-=dt*slow; const k=1-Math.max(0,th.life/th.maxLife);
+    th.x=th.sx+(p.x-th.sx)*k; th.y=th.sy+(p.y-th.sy)*k; th.wob=Math.sin(B.t*4+th.seed)*8;
+    if(th.life<=0){ th.dead=true; B.comp-=12; B.tookHit=true; p.glow=1; thud(); screenShake=7; addFloat(p.x,p.y-40,"心乱 -12","#ff8a8a");
+      if(B.comp<=0){ B.comp=0; onLose(); return; } } }
+  B.thoughts=B.thoughts.filter(t=>!t.dead);
+  for(const w of B.waves){ w.r+=dt*620; w.life-=dt; if(!w.hit&&w.r>=dist(w.x,w.y,d.x,d.y)-40){ w.hit=true; if(w.dmg>0) hitDemon(w.dmg,w.heal); } }
+  B.waves=B.waves.filter(w=>w.life>0);
+  for(const f of B.floats){ f.y-=dt*40; f.life-=dt; } B.floats=B.floats.filter(f=>f.life>0);
+  for(const s of B.sparks){ s.x+=s.vx*dt; s.y+=s.vy*dt; s.vy+=240*dt; s.life-=dt*1.6; } B.sparks=B.sparks.filter(s=>s.life>0);
+  for(const pa of B.particles){ pa.y-=pa.s*dt*4; if(pa.y<-4){ pa.y=H+4; pa.x=Math.random()*W; } }
+  if(B.combo>0){ B.comboTimer-=dt; if(B.comboTimer<=0) setCombo(0); }
+  if(B.flash>0) B.flash-=dt*2;
+  $("demonHp").style.width=Math.max(0,d.hp/d.maxHp*100)+"%"; $("composeHp").style.width=Math.max(0,B.comp/B.maxComp*100)+"%";
+}
+function roar(n){ for(let k=0;k<n;k++) setTimeout(()=>{ if(B&&B.running) spawnThought(); },k*180); if(B) B.demon.shake=.6; bell(160,.1); }
+function spawnThought(){ if(!B) return; const d=B.demon; const txt=THOUGHTS[Math.floor(Math.random()*THOUGHTS.length)];
+  const sx=d.x+(Math.random()-.5)*120,sy=d.y+30+Math.random()*30,life=3.2+Math.random()*1.2;
+  B.thoughts.push({text:txt,sx,sy,x:sx,y:sy,life,maxLife:life,r:30,seed:Math.random()*9,wob:0,dead:false}); }
+function hitDemon(dmg,heal){ const d=B.demon; d.hp-=dmg; d.shake=.5; thud(); screenShake=7;
+  addFloat(d.x+(Math.random()-.5)*30,d.y-30,"-"+Math.round(dmg),"#fff0c0"); spawnSparks(d.x,d.y,TECHS[B.tech].color,12);
+  if(heal>0){ B.comp=Math.min(B.maxComp,B.comp+heal); addFloat(B.player.x,B.player.y-50,"慈心 +"+Math.round(heal),"#9ef5d8"); }
+  if(d.hp<=0){ d.hp=0; onWin(); } }
+function fireRelease(){ if(!B||B.over||B.t<B.introDur) return; const cur=B.phases[B.phaseIdx];
+  if(cur.k!=="out"){ addFloat(B.player.x,B.player.y-50,"气未沉…","#9fb0c8"); return; }
+  if(B.releasedThis) return; B.releasedThis=true; const tc=TECHS[B.tech];
+  const pos=B.phaseT/cur.t, q=Math.max(.35,1-Math.abs(pos-.55)*2);
+  if(q>.7) setCombo(B.combo+1); else setCombo(Math.max(1,B.combo));
+  const mult=1+Math.min(1.3,(B.combo-1)*(0.25+B.bo.comboMul));
+  const dmg=(tc.dmg+S.lv*1.5)*q*mult*(1+B.bo.dmgMul), heal=tc.heal*q;
+  B.player.glow=1; bell(660,.16);
+  B.waves.push({x:B.player.x,y:B.player.y,r:30,life:1,dmg,heal,hit:false,color:tc.color}); }
+function setCombo(c){ B.combo=c; if(c>B.maxCombo) B.maxCombo=c; B.comboTimer=4; const el=$("comboTxt");
+  if(c>=2){ el.textContent="心流 ×"+c+" 连击"; el.style.opacity="1"; if(c>=3){ B.flash=.5; B.flashCol="rgba(232,200,132,"; } } else el.style.opacity="0"; }
+function addFloat(x,y,txt,color){ B.floats.push({x,y,txt,color,life:1.1}); }
+function spawnSparks(x,y,color,n){ for(let k=0;k<n;k++){ const a=Math.random()*7,sp=80+Math.random()*160; B.sparks.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-60,life:.6+Math.random()*.3,color}); } }
+
+function battleTap(cx,cy){ if(!B||B.over||B.t<B.introDur) return;
+  for(const th of B.thoughts){ if(th.dead) continue; if(dist(cx,cy,th.x,th.y)<th.r+10){
+    th.dead=true; B.demon.hp-=3+S.lv*0.3; B.demon.shake=.3; B.stat_th=(B.stat_th||0)+1;
+    S.stats.totalThoughts++; S.daily.thoughts++; addFloat(th.x,th.y,"放下","#bff3ff"); bell(740,.08); spawnSparks(th.x,th.y,"#bff3ff",6);
+    if(B.bo.lotusHeal>0){ B.comp=Math.min(B.maxComp,B.comp+B.bo.lotusHeal); }
+    B.waves.push({x:th.x,y:th.y,r:8,life:.4,dmg:0,heal:0,hit:true,color:"#bff3ff"});
+    if(B.demon.hp<=0){ B.demon.hp=0; onWin(); } return; } }
+  fireRelease(); }
+cv.addEventListener("mousedown",e=>{ const r=cv.getBoundingClientRect(); battleTap(e.clientX-r.left,e.clientY-r.top); });
+cv.addEventListener("touchstart",e=>{ e.preventDefault(); const r=cv.getBoundingClientRect(); for(let k=0;k<e.changedTouches.length;k++){ const t=e.changedTouches[k]; battleTap(t.clientX-r.left,t.clientY-r.top); } },{passive:false});
+window.addEventListener("keydown",e=>{ if(curScreen==="battle"&&e.code==="Space"){ e.preventDefault(); if(!e.repeat) fireRelease(); } });
+function dist(a,b,c,d){ return Math.hypot(a-c,b-d); }
+
+/* ---- 绘制 ---- */
+function drawBattle(){ let ox=0,oy=0; if(screenShake>0){ ox=(Math.random()-.5)*screenShake; oy=(Math.random()-.5)*screenShake; screenShake-=.5; }
+  ctx.save(); ctx.translate(ox,oy);
+  drawSky(B.lv.sky); drawMountains();
+  for(const pa of B.particles){ ctx.fillStyle="rgba(232,200,132,"+(.15+.25*Math.sin(B.t+pa.x))+")"; ctx.beginPath(); ctx.arc(pa.x,pa.y,pa.r,0,7); ctx.fill(); }
+  drawDemon(); drawWaves(); drawSparks(); drawThoughts(); drawPlayer(); drawFloats();
+  ctx.restore();
+  // 暗角
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.55)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+  if(B.flash>0){ ctx.fillStyle=(B.flashCol||"rgba(255,255,255,")+(B.flash*0.25)+")"; ctx.fillRect(0,0,W,H); }
+  if(!B.over && B.t<B.introDur) drawIntroBanner();
+}
+function drawIntroBanner(){ const k=B.t/B.introDur;
+  ctx.fillStyle="rgba(5,7,13,"+(0.62*(1-k))+")"; ctx.fillRect(0,0,W,H);
+  const a=Math.sin(Math.min(1,k*1.3)*Math.PI); // 淡入淡出
+  ctx.globalAlpha=Math.max(0,a); ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillStyle="#ff9d9d"; ctx.font="13px sans-serif"; ctx.fillText("—— 心 魔 现 身 ——", W/2, H*0.42);
+  ctx.fillStyle="#fff"; ctx.font="bold 26px serif"; ctx.fillText(B.lv.demonName, W/2, H*0.42+34);
+  ctx.globalAlpha=1; }
+function drawSky(sky){ const g=ctx.createLinearGradient(0,0,0,H);
+  const sets={dawn:["#3a4a72","#caa0a0","#f0d9b5"],morning:["#274472","#5a86c2","#bcd7f0"],dusk:["#3a1f3a","#7a3550","#d98a5a"],fog:["#3a3f55","#5e6580","#9aa0b8"],night:["#0a1024","#1a2342","#2d3a5e"],cosmic:["#1a0e36","#2e1a5e","#5e3a9e"],void:["#0a0612","#241038","#3a1a4e"]};
+  const c=sets[sky]||sets.night; g.addColorStop(0,c[0]); g.addColorStop(.55,c[1]); g.addColorStop(1,c[2]); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  if(sky==="cosmic"||sky==="night"||sky==="void"){ for(let i=0;i<60;i++){ const x=(i*73.3)%W,y=(i*131.7)%(H*0.62); ctx.fillStyle="rgba(255,255,255,"+(.3+.5*Math.sin(B.t*2+i))+")"; ctx.fillRect(x,y,1.5,1.5);} }
+  const mr=sky==="dusk"?34:26; ctx.fillStyle=(sky==="dusk"||sky==="dawn")?"rgba(255,220,160,.9)":"rgba(245,245,230,.85)";
+  ctx.beginPath(); ctx.arc(W*0.76,H*0.16,mr,0,7); ctx.fill(); }
+function drawMountains(){ const layers=[{y:.55,c:"rgba(20,26,44,.5)"},{y:.66,c:"rgba(14,18,32,.7)"},{y:.78,c:"rgba(8,11,20,.95)"}];
+  layers.forEach((L,li)=>{ ctx.fillStyle=L.c; ctx.beginPath(); ctx.moveTo(0,H); const base=H*L.y,peaks=4+li;
+    for(let i=0;i<=peaks;i++){ const x=W*i/peaks,h=base-Math.abs(Math.sin(i*1.3+li))*70-li*8; ctx.lineTo(x,h); } ctx.lineTo(W,H); ctx.closePath(); ctx.fill(); }); }
+function drawDemon(){ const d=B.demon,t=B.t,sx=(Math.random()-.5)*d.shake*16; const x=d.x+sx,y=d.y+Math.sin(t*1.5)*10;
+  const hpR=d.hp/d.maxHp,R=46+22*hpR; ctx.save(); ctx.translate(x,y);
+  if(B.over&&B.win) ctx.globalAlpha=B.demonAlpha;
+  const sc=(!B.over && B.t<B.introDur) ? (0.35+0.65*Math.min(1,B.t/B.introDur)) : 1; if(sc!==1) ctx.scale(sc,sc);
+  const ga=ctx.createRadialGradient(0,0,10,0,0,R*2.2); ga.addColorStop(0,d.color+"66"); ga.addColorStop(1,d.color+"00"); ctx.fillStyle=ga; ctx.beginPath(); ctx.arc(0,0,R*2.2,0,7); ctx.fill();
+  ctx.strokeStyle=d.color+"aa"; ctx.lineWidth=3; for(let i=0;i<8;i++){ const a=i/8*Math.PI*2+t*.4,len=R+18+Math.sin(t*3+i)*10; ctx.beginPath(); ctx.moveTo(Math.cos(a)*R*.8,Math.sin(a)*R*.8); ctx.lineTo(Math.cos(a)*len,Math.sin(a)*len); ctx.stroke(); }
+  if(d.spikes){ ctx.fillStyle=d.color; for(let i=0;i<d.spikes;i++){ const a=i/d.spikes*Math.PI*2-t*.5; ctx.beginPath(); ctx.moveTo(Math.cos(a)*R,Math.sin(a)*R); ctx.lineTo(Math.cos(a-.12)*(R+26),Math.sin(a-.12)*(R+26)); ctx.lineTo(Math.cos(a+.12)*R,Math.sin(a+.12)*R); ctx.closePath(); ctx.fill(); } }
+  const bg=ctx.createRadialGradient(-R*.3,-R*.3,6,0,0,R); bg.addColorStop(0,"#ffffff33"); bg.addColorStop(.3,d.color); bg.addColorStop(1,shade(d.color,-40)); ctx.fillStyle=bg;
+  ctx.beginPath(); for(let a=0;a<=Math.PI*2+.01;a+=.2){ const wob=1+.06*Math.sin(a*5+t*3),rr=R*wob,px=Math.cos(a)*rr,py=Math.sin(a)*rr; a===0?ctx.moveTo(px,py):ctx.lineTo(px,py); } ctx.closePath(); ctx.fill();
+  const ec=d.eyes; for(let i=0;i<ec;i++){ const ex=(i-(ec-1)/2)*22,ey=-6; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(ex,ey,9,0,7); ctx.fill(); ctx.fillStyle="#1a0a0a"; ctx.beginPath(); ctx.arc(ex+Math.sin(t)*2,ey+2,4.5,0,7); ctx.fill(); }
+  ctx.strokeStyle="#2a0a0a"; ctx.lineWidth=3; ctx.beginPath(); for(let i=0;i<=6;i++){ const mx=-18+i*6,my=18+(i%2?5:-3); i===0?ctx.moveTo(mx,my):ctx.lineTo(mx,my); } ctx.stroke();
+  ctx.restore(); }
+function drawPlayer(){ const p=B.player,t=B.t,col=TECHS[B.tech].color;
+  const ga=ctx.createRadialGradient(p.x,p.y,4,p.x,p.y,p.aura+p.glow*40); ga.addColorStop(0,col+"cc"); ga.addColorStop(.6,col+"44"); ga.addColorStop(1,col+"00"); ctx.fillStyle=ga; ctx.beginPath(); ctx.arc(p.x,p.y,p.aura+p.glow*40,0,7); ctx.fill();
+  if(B.phases[B.phaseIdx].k==="out"&&!B.releasedThis){ const k=B.phaseT/B.phases[B.phaseIdx].t; ctx.strokeStyle="rgba(255,240,200,"+(.8-k*.5)+")"; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(p.x,p.y,p.aura+18+Math.sin(t*8)*3,0,7); ctx.stroke(); }
+  ctx.save(); ctx.translate(p.x,p.y);
+  // 莲座
+  ctx.fillStyle="rgba(255,158,203,.5)"; for(let i=0;i<5;i++){ const a=Math.PI+i/4*Math.PI; ctx.beginPath(); ctx.ellipse(Math.cos(a)*16,22+Math.sin(a)*4,11,6,a,0,7); ctx.fill(); }
+  // 身形
+  const rg=ctx.createLinearGradient(0,-26,0,20); rg.addColorStop(0,"#f3dca6"); rg.addColorStop(1,"#e8c884"); ctx.fillStyle=rg;
+  ctx.beginPath(); ctx.moveTo(0,-26); ctx.lineTo(26,18); ctx.quadraticCurveTo(0,30,-26,18); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#f3dca6"; ctx.beginPath(); ctx.arc(0,-30,11,0,7); ctx.fill();
+  ctx.strokeStyle="rgba(255,245,210,.7)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,-30,16,0,7); ctx.stroke();
+  ctx.restore(); }
+function drawWaves(){ for(const w of B.waves){ ctx.strokeStyle=(w.color||"#fff")+Math.floor(Math.max(0,w.life)*200).toString(16).padStart(2,"0"); ctx.lineWidth=4*w.life+1; ctx.beginPath(); ctx.arc(w.x,w.y,w.r,0,7); ctx.stroke(); } }
+function drawSparks(){ for(const s of B.sparks){ ctx.globalAlpha=Math.max(0,s.life); ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(s.x,s.y,2.2,0,7); ctx.fill(); ctx.globalAlpha=1; } }
+function drawThoughts(){ for(const th of B.thoughts){ const x=th.x+th.wob,y=th.y; ctx.save(); ctx.fillStyle="rgba(20,24,40,.82)"; ctx.strokeStyle="rgba(200,160,255,.7)"; ctx.lineWidth=1.5; roundCloud(x,y,th.r); ctx.fill(); ctx.stroke(); ctx.fillStyle="#e6dcff"; ctx.font="11px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(th.text,x,y); ctx.restore(); } }
+function drawFloats(){ for(const f of B.floats){ ctx.globalAlpha=Math.min(1,f.life); ctx.fillStyle=f.color; ctx.font="bold 15px sans-serif"; ctx.textAlign="center"; ctx.fillText(f.txt,f.x,f.y); ctx.globalAlpha=1; } }
+function roundCloud(x,y,r){ ctx.beginPath(); ctx.ellipse(x,y,r,r*.7,0,0,7); ctx.ellipse(x-r*.6,y+2,r*.5,r*.42,0,0,7); ctx.ellipse(x+r*.6,y+2,r*.5,r*.42,0,0,7); }
+function shade(hex,amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)+amt,g=(n>>8&255)+amt,b=(n&255)+amt; r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b)); return "#"+((r<<16)|(g<<8)|b).toString(16).padStart(6,"0"); }
+
+/* ---- 过场动画 ---- */
+function onWin(){ if(B.over) return; B.over=true; B.win=true; B.outroT=0; B.demonAlpha=1; B.thoughts=[]; B.waves=[]; B.light=[];
+  if(window.speechSynthesis) speechSynthesis.cancel();
+  for(let k=0;k<48;k++){ const a=Math.random()*7,r=Math.random()*44; B.light.push({x:B.demon.x+Math.cos(a)*r,y:B.demon.y+Math.sin(a)*r,vx:(Math.random()-.5)*46,vy:-46-Math.random()*100,life:1+Math.random()*.9,sz:2+Math.random()*3}); }
+  bell(784,.25); setTimeout(()=>bell(1046,.22),220); setTimeout(()=>bell(1318,.18),460); }
+function onLose(){ if(B.over) return; B.over=true; B.win=false; B.outroT=0; if(window.speechSynthesis) speechSynthesis.cancel(); bell(170,.2); }
+function updateOutro(dt){
+  if(B.win){ B.demonAlpha=Math.max(0,1-B.outroT/1.05);
+    for(const p of B.light){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=22*dt; p.life-=dt*.6; } B.light=B.light.filter(p=>p.life>0); }
+  for(const s of B.sparks){ s.x+=s.vx*dt; s.y+=s.vy*dt; s.vy+=240*dt; s.life-=dt*1.6; } B.sparks=B.sparks.filter(s=>s.life>0);
+  for(const pa of B.particles){ pa.y-=pa.s*dt*4; if(pa.y<-4){ pa.y=H+4; pa.x=Math.random()*W; } } }
+function drawOutro(){ const dur=B.win?1.9:1.1, k=Math.min(1,B.outroT/dur);
+  if(B.win){ const cx=B.demon.x,cy=B.demon.y;
+    const bloom=ctx.createRadialGradient(cx,cy,0,cx,cy,80+k*280);
+    bloom.addColorStop(0,"rgba(255,246,214,"+(.55*(1-k)+.2)+")"); bloom.addColorStop(.5,"rgba(255,222,150,"+(.32*(1-k))+")"); bloom.addColorStop(1,"rgba(255,222,150,0)");
+    ctx.fillStyle=bloom; ctx.fillRect(0,0,W,H);
+    for(const p of B.light){ ctx.globalAlpha=Math.max(0,Math.min(1,p.life)); ctx.fillStyle="#fff6db"; ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,7); ctx.fill(); } ctx.globalAlpha=1;
+    ctx.fillStyle="rgba(255,250,236,"+(k*0.32)+")"; ctx.fillRect(0,0,W,H);
+    if(k>0.45){ ctx.globalAlpha=Math.min(1,(k-0.45)/0.3); ctx.font="66px serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("🪷",cx,cy); ctx.globalAlpha=1; }
+  } else {
+    ctx.fillStyle="rgba(8,11,20,"+(k*0.72)+")"; ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=Math.min(1,k*1.6); ctx.fillStyle="#9fb0c8"; ctx.font="22px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("心 乱 了…",W/2,H/2); ctx.globalAlpha=1; }
+}
+/* ---- 结算 ---- */
+function finishBattle(win){ stopMusic(); if(window.speechSynthesis) speechSynthesis.cancel();
+  const lv=B.lv,idx=B.i;
+  if(win){
+    const firstClear=S.cleared<idx;
+    const elapsed=(performance.now()-B.startT)/1000;
+    // 纪录
+    const rec=S.records[idx]||{}; if(!rec.time||elapsed<rec.time) rec.time=elapsed; if(!rec.combo||B.maxCombo>rec.combo) rec.combo=B.maxCombo; S.records[idx]=rec;
+    // 统计
+    if(B.maxCombo>S.stats.maxCombo) S.stats.maxCombo=B.maxCombo; S.stats.wins++;
+    if(!B.tookHit) S.stats.noHitClears++;
+    S.daily.kills++; if(B.maxCombo>S.daily.maxCombo) S.daily.maxCombo=B.maxCombo;
+    const gainEnergy=15+idx*5; S.energy+=gainEnergy;
+    let dropItem=null;
+    if(firstClear){ S.cleared=idx; if(!S.unlockedTech.includes(lv.tech)) S.unlockedTech.push(lv.tech);
+      const dropId=lv.hidden?"relic":DROPS[idx]; if(dropId&&!S.owned[dropId]){ S.owned[dropId]=true; dropItem=getItem(dropId); } }
+    let gainExp=Math.round((40+idx*15+(firstClear?30:0))*(1+B.bo.expMul));
+    let leveled=0; S.exp+=gainExp; while(S.exp>=expNeed(S.lv)){ S.exp-=expNeed(S.lv); S.lv++; S.maxComp+=15; leveled++; }
+    const justUnlockedHidden = firstClear && idx===5;       // 刚通关第6关 → 解封隐藏
+    const showEnd = firstClear && lv.hidden && !S.seenEnd;
+    const seqs=[];
+    if(firstClear && lv.win) seqs.push({lines:lv.win, bg:lv.demonEmoji, scene:lv.sky});
+    if(justUnlockedHidden){ S.introSeen_6=true; seqs.push({lines:LEVELS[6].intro, bg:"🪞", scene:"void"}); }
+    if(showEnd){ S.seenEnd=true; seqs.push({lines:buildEnding(), bg:"🌅", mood:"ending", scene:"sunrise"}); }
+    checkAch(); save();
+    showResult(true,{lv,idx,gainExp,gainEnergy,leveled,firstClear,dropItem,maxCombo:B.maxCombo,
+      onClose:()=>{ if(showEnd) S.seenEnd=true; save(); playSeq(seqs, toMap); }});
+  } else { bell(180,.2); showResult(false,{lv,idx}); }
+}
+function showResult(win,d){ show("result"); playMusic("zen"); const card=$("resultCard");
+  if(win){
+    let up=d.leveled>0?`<div class="levelup">✨ 修为提升 ${d.leveled} 级 → ${S.lv} 级（定力上限 +${d.leveled*15}）</div>`:"";
+    let drop=d.dropItem?`<div class="drop">🎁 获得法器 ${d.dropItem.emoji} <b style="color:var(--gold)">${d.dropItem.name}</b> — ${d.dropItem.desc}（去『法器』装备）</div>`:"";
+    let combo=d.maxCombo>=2?`<div style="font-size:12px;opacity:.7">本场最高连击 ×${d.maxCombo}</div>`:"";
+    card.innerHTML=`<div class="em">${d.lv.hidden?"🌅":"🪷"}</div><h2>${d.lv.hidden?"照 破 无 明":"心魔降伏"}</h2>
+      <div class="insight"><b>心法领悟</b><br>${d.lv.insight}</div>${up}${drop}
+      <div class="rewards"><span>📖 经验 +${d.gainExp}</span><span>✨ 灵气 +${d.gainEnergy}</span></div>${combo}
+      <button class="btn" id="resOk">${d.lv.hidden?"圆 满":"返 回 心 山"}</button>`;
+    $("resOk").onclick=d.onClose;
+  } else {
+    card.innerHTML=`<div class="em">🌧️</div><h2>心 乱 了</h2>
+      <div class="insight">定力耗尽，被杂念淹没——这正是修行的日常。<br><b>失败不是退步</b>，每一次重来，心都更稳一分。</div>
+      <div style="display:flex;gap:10px;margin-top:6px"><button class="btn ghost" id="resBack" style="flex:0 0 110px">返回心山</button><button class="btn" id="resRetry">再 试 一 次</button></div>`;
+    $("resBack").onclick=toMap; $("resRetry").onclick=()=>{ const i=B.i; B=null; startBattle(i); };
+  }
+}
+function toMap(){ B=null; renderMap(); playMusic("zen"); show("map"); }
+
+$("bQuit").onclick=()=>{ if(B){ B.running=false; stopMusic(); if(window.speechSynthesis) speechSynthesis.cancel(); } B=null; renderMap(); playMusic("zen"); show("map"); };
+$("bSound").onclick=()=>{ S.sound=!S.sound; save(); $("bSound").textContent=S.sound?"🔊":"🔇"; if(S.sound) playMusic(curMood,curBase); else stopMusic(); };
+$("bVoice").onclick=()=>{ S.voice=!S.voice; save(); $("bVoice").textContent=S.voice?"🗣️":"🔇"; if(!S.voice&&window.speechSynthesis) speechSynthesis.cancel(); };
+$("switchTech").onclick=()=>{ if(!B) return; const cur=S.unlockedTech.indexOf(B.tech); const nx=S.unlockedTech[(cur+1)%S.unlockedTech.length]; B.tech=nx; buildPhases(); $("techLab").textContent="心法："+TECHS[nx].name; toast("切换心法："+TECHS[nx].name); };
+
+/* ===== 成就 ===== */
+function checkAch(){ ACH.forEach(a=>{ if(!S.ach[a.id]&&a.f(S)){ S.ach[a.id]=true; setTimeout(()=>toast("🏆 成就达成："+a.name),700); } }); }
+
+/* ===== 面板 ===== */
+function openPanel(html){ $("modalCard").innerHTML=html; $("modal").classList.add("on"); }
+function closePanel(){ $("modal").classList.remove("on"); }
+$("modal").addEventListener("click",e=>{ if(e.target===$("modal")) closePanel(); });
+
+function panelGear(){
+  const eq=S.equipped, b=bonus();
+  let h=`<h2>📿 法器</h2><div class="hint">最多装备 3 件 · 点击装备/卸下（当前 ${eq.length}/3）</div>`;
+  ITEMS.forEach(it=>{ const owned=!!S.owned[it.id], on=eq.includes(it.id);
+    h+=`<div class="row2 ${owned?(on?"on":""):"locked"}" ${owned?`data-eq="${it.id}"`:""}>
+      <div class="ic">${it.emoji}</div><div><div class="nm">${it.name}</div><div class="ds">${it.desc}</div></div>
+      <div class="st">${owned?(on?"✓ 已装备":"点击装备"):"未获得"}</div></div>`; });
+  h+=`<div class="hint" style="margin-top:10px">当前加成：定力+${b.maxComp} · 伤害+${Math.round(b.dmgMul*100)}% · 经验+${Math.round(b.expMul*100)}%</div><button class="btn" onclick="closePanel()">关 闭</button>`;
+  openPanel(h);
+  document.querySelectorAll("[data-eq]").forEach(el=>{ el.onclick=()=>{ const id=el.dataset.eq; const i=S.equipped.indexOf(id);
+    if(i>=0) S.equipped.splice(i,1); else { if(S.equipped.length>=3){ toast("最多装备 3 件"); return; } S.equipped.push(id); } save(); panelGear(); }; });
+}
+function panelQuest(){
+  refreshDaily(); const qs=[{t:"今日降伏 1 只心魔",r:30},{t:"单场连击达到 5",r:25},{t:"累计放下 20 个杂念",r:25}];
+  const prog=[S.daily.kills+"/1",S.daily.maxCombo+"/5",S.daily.thoughts+"/20"];
+  let h=`<h2>📜 每日任务</h2><div class="hint">每天 0 点刷新 · 完成可领灵气</div>`;
+  qs.forEach((q,i)=>{ const done=questDone(i),claimed=S.daily.claimed[i];
+    h+=`<div class="row2 ${done?"on":""}"><div class="ic">${claimed?"✅":done?"🎁":"⏳"}</div><div><div class="nm">${q.t}</div><div class="ds">进度 ${prog[i]} · 奖励 ✨${q.r}</div></div>
+      <div class="st">${claimed?"已领取":done?`<span data-cl="${i}" style="cursor:pointer;color:var(--gold)">领取</span>`:"进行中"}</div></div>`; });
+  h+=`<button class="btn" onclick="closePanel()">关 闭</button>`; openPanel(h);
+  document.querySelectorAll("[data-cl]").forEach(el=>{ el.onclick=()=>{ const i=+el.dataset.cl; if(questDone(i)&&!S.daily.claimed[i]){ S.daily.claimed[i]=true; S.energy+=qs[i].r; save(); toast("✨ +"+qs[i].r+" 灵气"); panelQuest(); renderMap(); } }; });
+}
+function panelAch(){ const got=Object.keys(S.ach).length;
+  let h=`<h2>🏆 成就</h2><div class="hint">已达成 ${got}/${ACH.length}</div><div class="achG">`;
+  ACH.forEach(a=>{ const u=!!S.ach[a.id]; h+=`<div class="ach ${u?"":"locked"}"><div class="ai">${u?a.icon:"🔒"}</div><div><div class="an">${a.name}</div><div class="ad">${a.desc}</div></div></div>`; });
+  h+=`</div><button class="btn" onclick="closePanel()">关 闭</button>`; openPanel(h);
+}
+function panelRec(){
+  let h=`<h2>📊 修行纪录</h2><div class="hint">各关最佳用时与最高连击</div>`;
+  LEVELS.forEach((lv,i)=>{ if(lv.hidden&&S.cleared<5) return; const r=S.records[i];
+    h+=`<div class="row2"><div class="ic">${lv.demonEmoji}</div><div><div class="nm">${lv.hidden?lv.name:"第"+(i+1)+"关 "+lv.name}</div>
+      <div class="ds">${r?("最快 "+r.time.toFixed(1)+"s · 最高连击 ×"+r.combo):"尚未通关"}</div></div></div>`; });
+  h+=`<div class="hint" style="margin-top:8px">累计降伏 ${S.stats.wins} 次 · 放下杂念 ${S.stats.totalThoughts} 个 · 历史最高连击 ×${S.stats.maxCombo}</div><button class="btn" onclick="closePanel()">关 闭</button>`;
+  openPanel(h);
+}
+function panelCult(){
+  const cost=40+S.compUp*20;
+  let h=`<h2>🧘 闭关打坐</h2><div class="hint">消耗灵气精进修为</div>
+    <div class="row2"><div class="ic">🛡️</div><div><div class="nm">凝练定力上限 +10</div><div class="ds">当前上限 ${S.maxComp} · 已强化 ${S.compUp} 次</div></div>
+      <div class="st"><span id="buyComp" style="cursor:pointer;color:var(--gold)">✨${cost}</span></div></div>
+    <div class="row2"><div class="ic">📖</div><div><div class="nm">顿悟（换经验）</div><div class="ds">立即获得 50 经验</div></div>
+      <div class="st"><span id="buyExp" style="cursor:pointer;color:var(--gold)">✨30</span></div></div>
+    <div class="hint" style="margin-top:8px">当前灵气：✨ ${S.energy}</div><button class="btn" onclick="closePanel()">关 闭</button>`;
+  openPanel(h);
+  $("buyComp").onclick=()=>{ if(S.energy<cost){ toast("灵气不足"); return; } S.energy-=cost; S.maxComp+=10; S.compUp++; save(); toast("定力上限 +10"); panelCult(); renderMap(); };
+  $("buyExp").onclick=()=>{ if(S.energy<30){ toast("灵气不足"); return; } S.energy-=30; S.exp+=50; let lv=0; while(S.exp>=expNeed(S.lv)){ S.exp-=expNeed(S.lv); S.lv++; S.maxComp+=15; lv++; } if(lv){ checkAch(); toast("修为提升 "+lv+" 级"); } else toast("经验 +50"); save(); panelCult(); renderMap(); };
+}
+$("gearBtn").onclick=panelGear; $("questBtn").onclick=panelQuest; $("achBtn").onclick=panelAch; $("recBtn").onclick=panelRec; $("cultBtn").onclick=panelCult;
+
+/* ===== 导航 ===== */
+let pickedRole="worker";
+function openCreate(){ pickedRole=S.role||"worker"; $("nameInput").value=S.name||"";
+  $("roleGrid").innerHTML=ROLES.map(r=>`<div class="roleChip ${r.id===pickedRole?"on":""}" data-r="${r.id}">${r.label}</div>`).join("");
+  document.querySelectorAll("#roleGrid .roleChip").forEach(c=>{ c.onclick=()=>{ pickedRole=c.dataset.r; document.querySelectorAll("#roleGrid .roleChip").forEach(x=>x.classList.toggle("on",x.dataset.r===pickedRole)); }; });
+  playMusic("zen"); show("create"); }
+$("createOk").onclick=()=>{ S.name=($("nameInput").value||"").trim().slice(0,6); S.role=pickedRole; save(); gotoMapFirst(); };
+function gotoMapFirst(){ ensureAudio(); if(!S.seenIntro){ S.seenIntro=true; save(); runDialogue(STORY_INTRO,"🧙",()=>{ renderMap(); playMusic("zen"); show("map"); }, "story", "intro"); } else { renderMap(); playMusic("zen"); show("map"); } }
+$("startJourney").onclick=()=>{ ensureAudio(); if(S.cleared>=0||S.seenIntro){ if(!confirm("将从头开始新的修行，覆盖当前进度？")) return; S=JSON.parse(JSON.stringify(DEFAULT)); save(); } openCreate(); };
+$("continueJourney").onclick=()=>{ ensureAudio(); renderMap(); playMusic("zen"); show("map"); };
+$("howto").onclick=()=>{ openPanel(`<h2>📖 玩 法</h2><div class="insight" style="text-align:left;line-height:1.95">
+  ⛰️ 沿心山一关关向上，每关降伏一只<b>心魔</b>。<br>📖 开战前看<b>微课</b>，学会这关的冥想心法。<br>
+  🫁 战斗中跟随光环呼吸，在<b>呼气</b>时<b>点击/空格</b>释放觉察之力攻击心魔。<br>
+  💭 心魔喷出的<b>杂念气泡</b>飘来时<b>点掉它们</b>(放下)，否则会扣<b>定力</b>。<br>
+  🔥 连续踩准呼气 → <b>心流连击</b>，伤害更高。<br>📿 通关掉落<b>法器</b>，可装备加成。<br>
+  💀 定力归零=重试；心魔血空=降伏，升修为、解锁新关。</div><button class="btn" onclick="closePanel()">明 白 了</button>`); };
+
+if(S.cleared<0&&!S.seenIntro) $("continueJourney").disabled=true;
+refreshDaily(); renderMap();
+window.addEventListener("click",()=>ensureAudio(),{once:true});
+
+/* ===== PWA：图标 + manifest + 离线 Service Worker ===== */
+(function(){
+  try{
+    // 运行时生成图标（iOS 添加到主屏幕用）
+    const ic=document.createElement("canvas"); ic.width=ic.height=192; const c=ic.getContext("2d");
+    const g=c.createLinearGradient(0,0,0,192); g.addColorStop(0,"#2a3a5e"); g.addColorStop(1,"#11162a"); c.fillStyle=g; c.fillRect(0,0,192,192);
+    c.font="120px serif"; c.textAlign="center"; c.textBaseline="middle"; c.fillText("⛰️",96,104);
+    const url=ic.toDataURL("image/png");
+    const link=document.createElement("link"); link.rel="apple-touch-icon"; link.href=url; document.head.appendChild(link);
+    const isHttp=location.protocol==="https:"||location.protocol==="http:";
+    if(isHttp){
+      // 线上：用同目录的标准 manifest + 注册 SW 实现真正离线
+      const mlink=document.createElement("link"); mlink.rel="manifest"; mlink.href="manifest.webmanifest"; document.head.appendChild(mlink);
+      if("serviceWorker" in navigator) window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+    } else {
+      // 本地 file://：内联 manifest（SW 无法在 file:// 注册）
+      const manifest={ name:"心山修行录", short_name:"心山", display:"standalone", background_color:"#0a0d16", theme_color:"#0a0d16", icons:[{src:url,sizes:"192x192",type:"image/png"}] };
+      const mblob=new Blob([JSON.stringify(manifest)],{type:"application/json"});
+      const mlink=document.createElement("link"); mlink.rel="manifest"; mlink.href=URL.createObjectURL(mblob); document.head.appendChild(mlink);
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
