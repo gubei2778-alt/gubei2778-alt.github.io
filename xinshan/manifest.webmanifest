@@ -1,0 +1,15 @@
+{
+  "name": "心山修行录",
+  "short_name": "心山",
+  "description": "一款边玩边修的冥想闯关 RPG",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d16",
+  "theme_color": "#0a0d16",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
