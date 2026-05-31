@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欠账本 · 运营后台</title>
+<style>
+  :root{
+    --bg:#f0e9da; --panel:#fffdf8; --panel2:#faf5ea; --soft:#f4ecdb;
+    --ink:#2c2620; --ink2:#4a4339; --sub:#9a8e78; --dim:#c3b9a2;
+    --line:rgba(176,141,79,.16); --line2:rgba(176,141,79,.30);
+    --gold:#b08d4f; --gold-d:#937337; --gold-l:#cdae6f;
+    --gold-soft:#f1e6cd;
+    --sage:#6f8a66; --sage-soft:#e8efe2;
+    --terra:#b5604a; --terra-soft:#f6e4dd;
+    --blue:#5b7892; --blue-soft:#e6edf2;
+    --shadow:0 10px 40px rgba(120,95,40,.10),0 2px 8px rgba(120,95,40,.05);
+    --shadow-sm:0 4px 18px rgba(120,95,40,.08);
+    --serif:"Didot","Bodoni 72","Hiragino Mincho ProN","Songti SC",Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(1100px 600px at 90% -10%,rgba(205,174,111,.18),transparent 55%),var(--bg);
+    min-height:100vh;display:flex}
+
+  /* 侧边栏 */
+  .side{width:236px;flex-shrink:0;height:100vh;position:sticky;top:0;padding:26px 18px;
+    border-right:1px solid var(--line);background:linear-gradient(180deg,#fffdf8,#f7efdf);display:flex;flex-direction:column}
+  .logo{display:flex;align-items:center;gap:11px;padding:0 8px 24px;border-bottom:1px solid var(--line);margin-bottom:18px}
+  .logo .mk{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#cdae6f,#9c7a38);
+    display:grid;place-items:center;font-size:20px;box-shadow:0 6px 16px rgba(156,122,56,.4)}
+  .logo .tx .en{font-family:var(--serif);font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-style:italic}
+  .logo .tx .cn{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:.5px}
+  .nav{display:flex;flex-direction:column;gap:4px;flex:1}
+  .nav button{display:flex;align-items:center;gap:12px;border:none;background:transparent;padding:12px 14px;
+    border-radius:13px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;font-family:inherit;
+    transition:.18s;text-align:left;width:100%}
+  .nav button .ic{font-size:17px;width:20px;text-align:center}
+  .nav button:hover{background:var(--gold-soft);color:var(--gold-d)}
+  .nav button.on{background:linear-gradient(135deg,#cdae6f,#a8843f);color:#fff;box-shadow:0 6px 16px rgba(176,141,79,.35)}
+  .side .me{display:flex;align-items:center;gap:11px;padding:12px;border-radius:14px;background:var(--panel2);border:1px solid var(--line)}
+  .side .me .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#b5604a,#cdae6f);display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+  .side .me .nm{font-size:13px;font-weight:700} .side .me .rl{font-size:11px;color:var(--sub)}
+
+  /* 主区 */
+  .main{flex:1;min-width:0;padding:28px 34px 60px;max-height:100vh;overflow-y:auto}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px;animation:fade .5s both}
+  .topbar h1{font-family:var(--serif);font-size:25px;font-weight:600;letter-spacing:.5px}
+  .topbar .sub{font-size:13px;color:var(--sub);margin-top:3px}
+  .range{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:4px;box-shadow:var(--shadow-sm)}
+  .range button{border:none;background:transparent;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;
+    color:var(--sub);cursor:pointer;font-family:inherit;transition:.15s}
+  .range button.on{background:var(--gold-soft);color:var(--gold-d)}
+
+  .page{display:none;animation:fade .45s both}
+  .page.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+  .kpi::after{content:'';position:absolute;right:-20px;top:-20px;width:70px;height:70px;border-radius:50%;background:var(--gold-soft);opacity:.5}
+  .kpi .k{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--sub);margin-bottom:10px;position:relative}
+  .kpi .v{font-family:var(--serif);font-size:27px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;position:relative}
+  .kpi .v .u{font-size:14px;color:var(--gold);margin-right:1px}
+  .kpi .d{font-size:12px;font-weight:700;margin-top:10px;display:flex;align-items:center;gap:4px;position:relative}
+  .kpi .d.up{color:var(--sage)} .kpi .d.down{color:var(--terra)}
+  .kpi .d span{color:var(--dim);font-weight:500}
+
+  .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:18px}
+  .grid2b{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow-sm)}
+  .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .card-h h3{font-family:var(--serif);font-size:17px;font-weight:600;letter-spacing:.4px}
+  .card-h .hint{font-size:12px;color:var(--sub)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px}
+  .legend span{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px}
+  .legend i{width:9px;height:9px;border-radius:50%}
+
+  svg{display:block;overflow:visible}
+  .axis{font-size:10px;fill:var(--dim)}
+
+  /* 漏斗 */
+  .funnel{display:flex;flex-direction:column;gap:9px}
+  .fn{display:flex;align-items:center;gap:13px}
+  .fn .fl{width:90px;font-size:12px;color:var(--sub);text-align:right}
+  .fn .fb{flex:1;height:34px;border-radius:9px;background:var(--soft);overflow:hidden;position:relative}
+  .fn .fb i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#cdae6f,#9c7a38);
+    display:flex;align-items:center;padding-left:12px;color:#fff;font-size:12px;font-weight:700;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .fn .fp{width:48px;font-size:12px;font-weight:700;color:var(--gold-d);font-family:var(--serif)}
+
+  /* 结构条 */
+  .donut-wrap{display:flex;align-items:center;gap:24px}
+
+  /* 表格 */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{text-align:left;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--sub);font-weight:600;
+    padding:0 14px 12px;border-bottom:1px solid var(--line2)}
+  .tbl th.r,.tbl td.r{text-align:right}
+  .tbl td{padding:13px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:var(--panel2)}
+  .u-cell{display:flex;align-items:center;gap:11px}
+  .u-cell .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+  .u-cell .nm{font-weight:700} .u-cell .id{font-size:11px;color:var(--dim)}
+  .mono{font-variant-numeric:tabular-nums;font-family:var(--serif);font-weight:600}
+  .badge{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:700;letter-spacing:.3px;display:inline-block}
+  .badge.vip{background:linear-gradient(135deg,#f6ecd4,#e9d3a3);color:var(--gold-d)}
+  .badge.free{background:var(--soft);color:var(--sub)}
+  .badge.trial{background:var(--blue-soft);color:var(--blue)}
+  .badge.churn{background:var(--terra-soft);color:var(--terra)}
+  .tag{font-size:11px;padding:3px 9px;border-radius:7px;font-weight:600}
+  .tag.act{background:var(--sage-soft);color:var(--sage)}
+  .tag.risk{background:var(--terra-soft);color:var(--terra)}
+  .tag.new{background:var(--gold-soft);color:var(--gold-d)}
+
+  .filterbar{display:flex;gap:11px;margin-bottom:18px;flex-wrap:wrap}
+  .filterbar input,.filterbar select{border:1px solid var(--line2);background:var(--panel);border-radius:12px;
+    padding:11px 14px;font-size:13px;font-family:inherit;color:var(--ink)}
+  .filterbar input{flex:1;min-width:200px}
+  .filterbar input:focus,.filterbar select:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,79,.12)}
+
+  .statline{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+  .stat-c{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:17px 18px;box-shadow:var(--shadow-sm)}
+  .stat-c .k{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--sub);margin-bottom:9px}
+  .stat-c .v{font-family:var(--serif);font-size:23px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat-c .v .u{font-size:13px;color:var(--gold)}
+  .stat-c .note{font-size:11px;color:var(--dim);margin-top:6px}
+
+  .hbar{display:flex;flex-direction:column;gap:13px}
+  .hb{display:flex;align-items:center;gap:13px}
+  .hb .hl{width:96px;font-size:12.5px;color:var(--ink2);font-weight:600}
+  .hb .ht{flex:1;height:12px;border-radius:8px;background:var(--soft);overflow:hidden}
+  .hb .ht i{display:block;height:100%;border-radius:8px;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .hb .hv{width:80px;text-align:right;font-size:12.5px;font-weight:700;font-family:var(--serif);color:var(--ink)}
+
+  .footer{text-align:center;font-size:11px;color:var(--dim);padding-top:24px;letter-spacing:.5px}
+  @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid2b{grid-template-columns:1fr}.statline{grid-template-columns:repeat(2,1fr)}.side{width:70px;padding:18px 10px}.logo .tx,.nav button span:not(.ic),.side .me .nm,.side .me .rl{display:none}.logo{justify-content:center}}
+</style>
+</head>
+<body>
+  <!-- 侧边栏 -->
+  <aside class="side">
+    <div class="logo"><div class="mk">📒</div><div class="tx"><div class="en">Private Ledger</div><div class="cn">运营后台</div></div></div>
+    <nav class="nav" id="nav">
+      <button class="on" data-p="dash"><span class="ic">◈</span><span>数据总览</span></button>
+      <button data-p="users"><span class="ic">◴</span><span>用户管理</span></button>
+      <button data-p="revenue"><span class="ic">◷</span><span>营收订阅</span></button>
+      <button data-p="insights"><span class="ic">◭</span><span>债务洞察</span></button>
+    </nav>
+    <div class="me"><div class="av">运</div><div><div class="nm">运营管理员</div><div class="rl">Operations</div></div></div>
+  </aside>
+
+  <!-- 主区 -->
+  <main class="main">
+    <div class="topbar">
+      <div><h1 id="page-title">数据总览</h1><div class="sub" id="page-sub">平台整体经营概况 · 截至今日</div></div>
+      <div class="range" id="range">
+        <button data-r="7" class="on">近 7 天</button>
+        <button data-r="30">近 30 天</button>
+        <button data-r="90">近 90 天</button>
+      </div>
+    </div>
+
+    <!-- 总览 -->
+    <section class="page on" id="p-dash">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h3>营收趋势</h3><span class="hint" id="rev-hint"></span></div>
+          <div id="chart-rev"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>付费转化漏斗</h3></div>
+          <div class="funnel" id="funnel"></div>
+        </div>
+      </div>
+      <div class="grid2b">
+        <div class="card">
+          <div class="card-h"><h3>新增 vs 活跃用户</h3></div>
+          <div id="chart-users"></div>
+          <div class="legend"><span><i style="background:#cdae6f"></i>日活 DAU</span><span><i style="background:#6f8a66"></i>新增用户</span></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>管理负债构成</h3></div>
+          <div class="donut-wrap"><div id="donut"></div><div class="legend" id="donut-legend" style="flex-direction:column;gap:11px"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>最近交易</h3><span class="hint">实时订阅 / 续费流水</span></div>
+        <table class="tbl"><thead><tr><th>用户</th><th>类型</th><th>套餐</th><th class="r">金额</th><th class="r">时间</th></tr></thead><tbody id="recent-tx"></tbody></table>
+      </div>
+    </section>
+
+    <!-- 用户 -->
+    <section class="page" id="p-users">
+      <div class="statline" id="user-stats"></div>
+      <div class="filterbar">
+        <input id="u-search" placeholder="🔍 搜索用户昵称 / ID…" oninput="renderUsers()">
+        <select id="u-plan" onchange="renderUsers()"><option value="">全部套餐</option><option value="vip">尊享会员</option><option value="trial">试用中</option><option value="free">免费用户</option><option value="churn">已流失</option></select>
+        <select id="u-tag" onchange="renderUsers()"><option value="">全部状态</option><option value="act">活跃</option><option value="new">新用户</option><option value="risk">流失风险</option></select>
+      </div>
+      <div class="card" style="padding:14px 8px">
+        <table class="tbl"><thead><tr><th>用户</th><th>套餐</th><th>状态</th><th class="r">管理负债</th><th class="r">注册</th><th class="r">最近活跃</th></tr></thead><tbody id="user-tbl"></tbody></table>
+      </div>
+    </section>
+
+    <!-- 营收 -->
+    <section class="page" id="p-revenue">
+      <div class="statline" id="rev-stats"></div>
+      <div class="grid2b">
+        <div class="card"><div class="card-h"><h3>MRR 月度经常性收入</h3></div><div id="chart-mrr"></div></div>
+        <div class="card"><div class="card-h"><h3>订阅套餐分布</h3></div><div class="donut-wrap"><div id="plan-donut"></div><div class="legend" id="plan-legend" style="flex-direction:column;gap:11px"></div></div></div>
+      </div>
+      <div class="grid2b">
+        <div class="card"><div class="card-h"><h3>续费 vs 流失</h3><span class="hint">按月</span></div><div id="chart-churn"></div>
+          <div class="legend"><span><i style="background:#6f8a66"></i>续费</span><span><i style="background:#b5604a"></i>流失</span></div></div>
+        <div class="card"><div class="card-h"><h3>关键经营指标</h3></div><div class="hbar" id="rev-hbar"></div></div>
+      </div>
+    </section>
+
+    <!-- 债务洞察 -->
+    <section class="page" id="p-insights">
+      <div class="statline" id="ins-stats"></div>
+      <div class="grid2b">
+        <div class="card"><div class="card-h"><h3>债务类型占比</h3></div><div class="hbar" id="ins-type"></div></div>
+        <div class="card"><div class="card-h"><h3>每户负债区间分布</h3></div><div id="chart-dist"></div></div>
+      </div>
+      <div class="grid2b">
+        <div class="card"><div class="card-h"><h3>利率区间分布</h3><span class="hint">高息预警占比</span></div><div class="hbar" id="ins-rate"></div></div>
+        <div class="card"><div class="card-h"><h3>平均还款周期</h3></div><div id="chart-cycle"></div></div>
+      </div>
+    </section>
+
+    <div class="footer">欠账本 Private Ledger · 运营后台 Demo · 数据为演示模拟，非真实用户</div>
+  </main>
+
+<script>
+/* ============ Mock 数据 ============ */
+let seed=20260531;
+function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
+function ri(a,b){return Math.floor(a+rnd()*(b-a+1))}
+function pick(a){return a[ri(0,a.length-1)]}
+
+const TYPE_NAMES={credit:'信用卡',huabei:'花呗白条',loan:'网贷消费贷',mortgage:'房贷车贷',personal:'私人借款',other:'其他'};
+const TYPE_COLORS={credit:'#b08d4f',huabei:'#cdae6f',loan:'#937337',mortgage:'#6f8a66',personal:'#b5604a',other:'#c3b9a2'};
+const PLAN_COLORS={vip:'#b08d4f',trial:'#5b7892',free:'#c3b9a2',churn:'#b5604a'};
+const PLAN_NAMES={vip:'尊享会员',trial:'试用中',free:'免费用户',churn:'已流失'};
+const surnames=['李','王','张','刘','陈','杨','黄','赵','周','吴','徐','孙','马','朱','胡','林','郭','何','高','罗'];
+const avColors=['#b5604a','#cdae6f','#6f8a66','#5b7892','#937337','#b08d4f'];
+
+// 用户
+const USERS=Array.from({length:60},(_,i)=>{
+  const plan=pick(['vip','vip','trial','free','free','free','churn']);
+  const debt=ri(8,260)*1000;
+  const tagPool=plan==='churn'?['risk']:(rnd()<.2?['new']:(rnd()<.7?['act']:['risk']));
+  const m=ri(1,12),d=ri(1,28);
+  return {id:'U'+(10248+i),name:pick(surnames)+pick(['先生','女士','**','*','同学']),plan,debt,
+    tag:tagPool[0],reg:`2025-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
+    active:pick(['今天','1天前','2天前','3天前','5天前','1周前','2周前','1月前']),
+    av:pick(avColors)};
+});
+
+// 时间序列(按 range 天数)
+function series(days,base,growth,vol){const a=[];let v=base;for(let i=0;i<days;i++){v=v*(1+growth)+( rnd()-.5)*vol;a.push(Math.max(0,Math.round(v)))}return a}
+
+/* ============ 渲染辅助 ============ */
+function fmt(n){return Math.round(n).toLocaleString('zh-CN')}
+function fmtK(n){return n>=10000?(n/10000).toFixed(1)+'万':fmt(n)}
+const $=id=>document.getElementById(id);
+
+let curRange=7;
+
+/* SVG 折线图 */
+function lineChart(el,data,opts={}){
+  const W=opts.w||560,H=opts.h||190,pT=14,pB=24,pL=8,pR=8;
+  const max=Math.max(...data,1),min=0;
+  const n=data.length, iw=W-pL-pR, ih=H-pT-pB;
+  const x=i=>pL+iw*i/(n-1), y=v=>pT+ih*(1-(v-min)/(max-min));
+  let line='',area='';
+  data.forEach((v,i)=>{line+=(i?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' '});
+  area=`M${x(0)} ${y(0)} `+data.map((v,i)=>'L'+x(i).toFixed(1)+' '+y(v).toFixed(1)).join(' ')+` L${x(n-1)} ${y(0)} Z`;
+  let grid='';for(let k=0;k<=3;k++){const yy=pT+ih*k/3;grid+=`<line x1="${pL}" y1="${yy}" x2="${W-pR}" y2="${yy}" stroke="rgba(176,141,79,.12)"/>`}
+  const labels=opts.labels||[];
+  let xl='';labels.forEach((t,i)=>{const idx=Math.round((n-1)*i/(labels.length-1));xl+=`<text class="axis" x="${x(idx)}" y="${H-6}" text-anchor="middle">${t}</text>`});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">
+    <defs><linearGradient id="la${el.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${opts.color||'#cdae6f'}" stop-opacity=".28"/><stop offset="1" stop-color="${opts.color||'#cdae6f'}" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${area}" fill="url(#la${el.id})"/>
+    <path d="${line}" fill="none" stroke="${opts.color||'#b08d4f'}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" style="stroke-dasharray:2000;stroke-dashoffset:2000;animation:draw 1.3s ease forwards"/>
+    ${data.map((v,i)=>i%Math.ceil(n/12)===0?`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="#fffdf8" stroke="${opts.color||'#b08d4f'}" stroke-width="2"/>`:'').join('')}
+    ${xl}</svg>`;
+}
+/* 双柱图 */
+function barChart(el,d1,d2,opts={}){
+  const W=opts.w||560,H=opts.h||190,pT=14,pB=24,pL=8,pR=8;
+  const max=Math.max(...d1,...d2,1),n=d1.length,iw=W-pL-pR,ih=H-pT-pB,gw=iw/n;
+  const bw=Math.min(gw*0.3,14);
+  let bars='';
+  for(let i=0;i<n;i++){const cx=pL+gw*i+gw/2;
+    const h1=d1[i]/max*ih,h2=d2[i]/max*ih;
+    bars+=`<rect x="${cx-bw-1}" y="${pT+ih-h1}" width="${bw}" height="${h1}" rx="3" fill="#cdae6f" style="transform-origin:bottom;animation:grow .8s ${i*.02}s ease both"/>`;
+    bars+=`<rect x="${cx+1}" y="${pT+ih-h2}" width="${bw}" height="${h2}" rx="3" fill="#6f8a66" style="transform-origin:bottom;animation:grow .8s ${i*.02}s ease both"/>`;
+  }
+  const labels=opts.labels||[];
+  let xl='';labels.forEach((t,i)=>{const idx=Math.round((n-1)*i/(labels.length-1));xl+=`<text class="axis" x="${pL+gw*idx+gw/2}" y="${H-6}" text-anchor="middle">${t}</text>`});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${bars}${xl}</svg>`;
+}
+/* 堆叠双柱(续费/流失) */
+function stackChart(el,d1,d2,labels){
+  const W=560,H=190,pT=14,pB=24,pL=8,pR=8;const n=d1.length;
+  const max=Math.max(...d1.map((v,i)=>v+d2[i]),1),iw=W-pL-pR,ih=H-pT-pB,gw=iw/n,bw=Math.min(gw*0.5,24);
+  let bars='';
+  for(let i=0;i<n;i++){const cx=pL+gw*i+gw/2;const h1=d1[i]/max*ih,h2=d2[i]/max*ih;
+    bars+=`<rect x="${cx-bw/2}" y="${pT+ih-h1}" width="${bw}" height="${h1}" rx="3" fill="#6f8a66" style="transform-origin:bottom;animation:grow .8s ${i*.04}s ease both"/>`;
+    bars+=`<rect x="${cx-bw/2}" y="${pT+ih-h1-h2}" width="${bw}" height="${h2}" rx="3" fill="#b5604a" style="transform-origin:bottom;animation:grow .8s ${i*.04}s ease both"/>`;}
+  let xl='';labels.forEach((t,i)=>xl+=`<text class="axis" x="${pL+gw*i+gw/2}" y="${H-6}" text-anchor="middle">${t}</text>`);
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${bars}${xl}</svg>`;
+}
+/* 环形图 */
+function donut(el,segs,total){
+  const R=58,sw=20,C=2*Math.PI*R;let off=0;let paths='';
+  segs.forEach(s=>{const frac=s.v/total;const len=C*frac;
+    paths+=`<circle cx="80" cy="80" r="${R}" fill="none" stroke="${s.c}" stroke-width="${sw}"
+      stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"
+      style="opacity:0;animation:fadein .6s ${off/C*.8}s forwards"/>`;off+=len;});
+  el.innerHTML=`<svg width="160" height="160" viewBox="0 0 160 160">${paths}
+    <text x="80" y="74" text-anchor="middle" font-family="var(--serif)" font-size="22" font-weight="600" fill="#2c2620">¥${fmtK(total)}</text>
+    <text x="80" y="94" text-anchor="middle" font-size="10" letter-spacing="1" fill="#9a8e78">合计</text></svg>`;
+}
+function hbars(el,items,max,fmtFn){
+  el.innerHTML=items.map(it=>`<div class="hb"><div class="hl">${it.label}</div>
+    <div class="ht"><i data-w="${it.val/max*100}" style="background:${it.color||'linear-gradient(90deg,#cdae6f,#9c7a38)'}"></i></div>
+    <div class="hv">${fmtFn?fmtFn(it.val):it.val}</div></div>`).join('');
+  requestAnimationFrame(()=>el.querySelectorAll('i[data-w]').forEach(i=>i.style.width=Math.min(100,i.dataset.w)+'%'));
+}
+
+/* ============ 各页渲染 ============ */
+function dayLabels(days){const a=[];const base=new Date('2026-05-31');const step=days<=7?1:Math.ceil(days/6);
+  for(let i=days-1;i>=0;i-=step){const d=new Date(base);d.setDate(d.getDate()-i);a.push((d.getMonth()+1)+'/'+d.getDate())}return a}
+
+function renderDash(){
+  const days=curRange;seed=20260531+days;
+  const dau=series(days,days===7?8200:days===30?7000:5800,0.012,400);
+  const newU=series(days,days===7?640:520,0.01,90);
+  const rev=series(days,days===7?28000:days===30?24000:19000,0.015,2600);
+  const totalRev=rev.reduce((a,b)=>a+b,0);
+  const curDau=dau[dau.length-1], prevDau=dau[0];
+  const payRate=(18.4+(rnd()-.5)).toFixed(1);
+  const mrr=386000;
+  const kpis=[
+    {k:'日活跃 DAU',v:fmt(curDau),u:'',d:((curDau-prevDau)/prevDau*100),base:'较期初'},
+    {k:'新增用户',v:fmt(newU.reduce((a,b)=>a+b,0)),u:'',d:8.6,base:'环比'},
+    {k:'付费率',v:payRate,u:'%',d:1.2,base:'环比',suffix:'%'},
+    {k:'区间营收',v:fmtK(totalRev),u:'¥',d:12.4,base:'环比'},
+    {k:'MRR',v:fmtK(mrr),u:'¥',d:6.3,base:'环比'}
+  ];
+  $('kpis').innerHTML=kpis.map(c=>{const up=c.d>=0;return `<div class="kpi"><div class="k">${c.k}</div>
+    <div class="v"><span class="u">${c.u}</span>${c.v}${c.suffix||''}</div>
+    <div class="d ${up?'up':'down'}">${up?'▲':'▼'} ${Math.abs(c.d).toFixed(1)}% <span>${c.base}</span></div></div>`}).join('');
+  $('rev-hint').textContent='区间累计 ¥'+fmt(totalRev);
+  lineChart($('chart-rev'),rev,{labels:dayLabels(days),color:'#b08d4f'});
+  barChart($('chart-users'),dau,newU,{labels:dayLabels(days)});
+  // 漏斗
+  const fn=[{l:'访问',v:42000},{l:'注册',v:18600},{l:'记账激活',v:11200},{l:'试用',v:4800},{l:'付费',v:2210}];
+  const fmax=fn[0].v;
+  $('funnel').innerHTML=fn.map((s,i)=>`<div class="fn"><div class="fl">${s.l}</div>
+    <div class="fb"><i data-w="${s.v/fmax*100}">${fmt(s.v)}</i></div>
+    <div class="fp">${(s.v/fmax*100).toFixed(0)}%</div></div>`).join('');
+  requestAnimationFrame(()=>$('funnel').querySelectorAll('i[data-w]').forEach(i=>i.style.width=i.dataset.w+'%'));
+  // 负债构成
+  const comp=[{c:'credit',v:4820},{c:'loan',v:3120},{c:'huabei',v:1980},{c:'mortgage',v:5600},{c:'personal',v:1240},{c:'other',v:560}];
+  const ct=comp.reduce((a,b)=>a+b.v,0);
+  donut($('donut'),comp.map(x=>({v:x.v,c:TYPE_COLORS[x.c]})),ct);
+  $('donut-legend').innerHTML=comp.sort((a,b)=>b.v-a.v).map(x=>`<span><i style="background:${TYPE_COLORS[x.c]}"></i>${TYPE_NAMES[x.c]} <b style="color:var(--ink2);margin-left:4px">¥${fmtK(x.v*1000)}</b></span>`).join('');
+  // 最近交易
+  const tx=USERS.filter(u=>u.plan==='vip'||u.plan==='trial').slice(0,7).map((u,i)=>({u,type:pick(['新订阅','续费','升级']),plan:pick(['年度尊享','季度尊享','月度尊享']),amt:pick([268,98,38,648]),time:pick(['刚刚','5分钟前','12分钟前','1小时前','3小时前','今天 09:14','今天 08:02'])}));
+  $('recent-tx').innerHTML=tx.map(t=>`<tr><td><div class="u-cell"><div class="av" style="background:${t.u.av}">${t.u.name[0]}</div><div><div class="nm">${t.u.name}</div><div class="id">${t.u.id}</div></div></div></td>
+    <td>${t.type}</td><td>${t.plan}</td><td class="r mono">¥${t.amt}</td><td class="r" style="color:var(--sub)">${t.time}</td></tr>`).join('');
+}
+
+function renderUsers(){
+  const q=($('u-search').value||'').trim();const plan=$('u-plan').value;const tag=$('u-tag').value;
+  let arr=USERS.filter(u=>(!q||u.name.includes(q)||u.id.includes(q))&&(!plan||u.plan===plan)&&(!tag||u.tag===tag));
+  const stats=[
+    {k:'总用户',v:fmt(USERS.length*412),note:'累计注册'},
+    {k:'尊享会员',v:fmt(USERS.filter(u=>u.plan==='vip').length*412),note:'付费用户'},
+    {k:'7日留存',v:'54.2',u:'%',note:'新用户次周留存'},
+    {k:'流失风险',v:fmt(USERS.filter(u=>u.tag==='risk').length*412),note:'30天未活跃'}
+  ];
+  $('user-stats').innerHTML=stats.map(s=>`<div class="stat-c"><div class="k">${s.k}</div><div class="v">${s.u?`<span class="u">${s.u}</span>`:''}${s.v}${s.u||''}</div><div class="note">${s.note}</div></div>`).join('');
+  $('user-tbl').innerHTML=arr.length?arr.map(u=>{
+    const tagMap={act:['act','活跃'],new:['new','新用户'],risk:['risk','流失风险']};const tg=tagMap[u.tag];
+    return `<tr><td><div class="u-cell"><div class="av" style="background:${u.av}">${u.name[0]}</div><div><div class="nm">${u.name}</div><div class="id">${u.id}</div></div></div></td>
+    <td><span class="badge ${u.plan}">${PLAN_NAMES[u.plan]}</span></td>
+    <td><span class="tag ${tg[0]}">${tg[1]}</span></td>
+    <td class="r mono">¥${fmt(u.debt)}</td>
+    <td class="r" style="color:var(--sub)">${u.reg}</td>
+    <td class="r" style="color:var(--sub)">${u.active}</td></tr>`}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--dim);padding:40px">没有匹配的用户</td></tr>';
+}
+
+function renderRevenue(){
+  seed=77;
+  const mrr=series(12,180000,0.06,9000);
+  const renew=[820,910,880,960,1020,1100,1180,1240,1310,1380,1460,1540];
+  const churn=[120,140,110,160,150,180,170,200,190,210,230,250];
+  const labels=['6月','7月','8月','9月','10月','11月','12月','1月','2月','3月','4月','5月'];
+  const stats=[
+    {k:'MRR',v:fmtK(386000),u:'¥',note:'月度经常性收入'},
+    {k:'ARPU',v:'47.6',u:'¥',note:'每付费用户月均'},
+    {k:'续费率',v:'86.2',suffix:'%',note:'到期用户续订'},
+    {k:'月流失率',v:'3.8',suffix:'%',note:'付费用户流失'}
+  ];
+  $('rev-stats').innerHTML=stats.map(s=>`<div class="stat-c"><div class="k">${s.k}</div><div class="v">${s.u?`<span class="u">${s.u}</span>`:''}${s.v}${s.suffix||''}</div><div class="note">${s.note}</div></div>`).join('');
+  lineChart($('chart-mrr'),mrr,{labels:['6月','9月','12月','3月','5月'],color:'#b08d4f'});
+  const plans=[{c:'vip',v:1820,nm:'年度尊享'},{c:'trial',v:760,nm:'季度尊享'},{c:'free',v:430,nm:'月度尊享'}];
+  const pt=plans.reduce((a,b)=>a+b.v,0);
+  donut($('plan-donut'),plans.map(p=>({v:p.v,c:PLAN_COLORS[p.c]})),pt);
+  $('plan-legend').innerHTML=plans.map(p=>`<span><i style="background:${PLAN_COLORS[p.c]}"></i>${p.nm} <b style="color:var(--ink2);margin-left:4px">${p.v} 人</b></span>`).join('');
+  stackChart($('chart-churn'),renew,churn,labels.filter((_,i)=>i%2===0));
+  hbars($('rev-hbar'),[
+    {label:'LTV',val:1180,color:'linear-gradient(90deg,#cdae6f,#9c7a38)'},
+    {label:'CAC',val:320,color:'linear-gradient(90deg,#5b7892,#3f5870)'},
+    {label:'回本周期',val:680},
+    {label:'付费转化',val:520,color:'linear-gradient(90deg,#6f8a66,#4f6a47)'}
+  ],1200,v=>v===1180?'¥1,180':v===320?'¥320':v===680?'6.8 月':'5.3%');
+}
+
+function renderInsights(){
+  const stats=[
+    {k:'平台管理负债',v:fmtK(173200000),u:'¥',note:'GMV · 全部债务总额'},
+    {k:'户均负债',v:fmt(70066),u:'¥',note:'人均管理债务'},
+    {k:'高息债务占比',v:'31.5',suffix:'%',note:'年化≥15%'},
+    {k:'平均还款周期',v:'14.2',suffix:' 月',note:'预计结清时长'}
+  ];
+  $('ins-stats').innerHTML=stats.map(s=>`<div class="stat-c"><div class="k">${s.k}</div><div class="v">${s.u?`<span class="u">${s.u}</span>`:''}${s.v}${s.suffix||''}</div><div class="note">${s.note}</div></div>`).join('');
+  const types=[{c:'mortgage',v:35},{c:'credit',v:27},{c:'loan',v:18},{c:'huabei',v:11},{c:'personal',v:6},{c:'other',v:3}];
+  hbars($('ins-type'),types.map(t=>({label:TYPE_NAMES[t.c],val:t.v,color:TYPE_COLORS[t.c]})),40,v=>v+'%');
+  const rates=[{l:'0-8%',v:24,c:'#6f8a66'},{l:'8-15%',v:44,c:'#cdae6f'},{l:'15-24%',v:24,c:'#b08d4f'},{l:'24%+',v:8,c:'#b5604a'}];
+  hbars($('ins-rate'),rates.map(r=>({label:r.l,val:r.v,color:r.c})),50,v=>v+'%');
+  // 每户负债区间柱图
+  const dist=[8,18,26,22,14,8,4];
+  barChartSingle($('chart-dist'),dist,['<1万','1-3万','3-5万','5-10万','10-20万','20-50万','50万+']);
+  // 还款周期折线
+  seed=9;const cyc=[6,9,12,15,18,22,28,24,20,16,13,11];
+  lineChart($('chart-cycle'),cyc,{labels:['1','3','5','7','9','11'],color:'#6f8a66'});
+}
+function barChartSingle(el,data,labels){
+  const W=560,H=190,pT=14,pB=24,pL=8,pR=8;const n=data.length;
+  const max=Math.max(...data,1),iw=W-pL-pR,ih=H-pT-pB,gw=iw/n,bw=Math.min(gw*0.5,30);
+  let bars='';for(let i=0;i<n;i++){const cx=pL+gw*i+gw/2,h=data[i]/max*ih;
+    bars+=`<rect x="${cx-bw/2}" y="${pT+ih-h}" width="${bw}" height="${h}" rx="4" fill="url(#bg1)" style="transform-origin:bottom;animation:grow .8s ${i*.05}s ease both"/>
+    <text class="axis" x="${cx}" y="${pT+ih-h-6}" text-anchor="middle" fill="#937337" font-weight="600">${data[i]}%</text>`;}
+  let xl='';labels.forEach((t,i)=>xl+=`<text class="axis" x="${pL+gw*i+gw/2}" y="${H-6}" text-anchor="middle">${t}</text>`);
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdae6f"/><stop offset="1" stop-color="#a8843f"/></linearGradient></defs>${bars}${xl}</svg>`;
+}
+
+/* ============ 导航 ============ */
+const TITLES={dash:['数据总览','平台整体经营概况 · 截至今日'],users:['用户管理','用户画像、付费状态与活跃留存'],revenue:['营收订阅','订阅收入、续费与流失分析'],insights:['债务洞察','平台聚合债务结构与风险分布']};
+function goto(p){
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  document.querySelectorAll('.page').forEach(s=>s.classList.toggle('on',s.id==='p-'+p));
+  $('page-title').textContent=TITLES[p][0];$('page-sub').textContent=TITLES[p][1];
+  $('range').style.visibility=p==='dash'?'visible':'hidden';
+  if(p==='dash')renderDash();if(p==='users')renderUsers();if(p==='revenue')renderRevenue();if(p==='insights')renderInsights();
+}
+document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)goto(b.dataset.p)});
+document.getElementById('range').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('#range button').forEach(x=>x.classList.toggle('on',x===b));curRange=+b.dataset.r;renderDash()});
+
+const style=document.createElement('style');
+style.textContent='@keyframes draw{to{stroke-dashoffset:0}}@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}@keyframes fadein{to{opacity:1}}';
+document.head.appendChild(style);
+
+renderDash();
+</script>
+</body>
+</html>
